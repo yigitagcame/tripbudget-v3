@@ -1,0 +1,66 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { motion } from 'framer-motion';
+import { Plane, Loader2 } from 'lucide-react';
+
+export default function AuthCallbackPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Auth callback error:', error);
+          router.push('/login?error=auth_callback_failed');
+          return;
+        }
+
+        if (session) {
+          // Successful authentication, redirect to chat
+          router.push('/chat');
+        } else {
+          // No session found, redirect to login
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Unexpected error during auth callback:', error);
+        router.push('/login?error=unexpected_error');
+      }
+    };
+
+    handleAuthCallback();
+  }, [router]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="text-center"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6"
+        >
+          <Plane className="w-8 h-8 text-white" />
+        </motion.div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          Completing Sign In...
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Please wait while we verify your authentication
+        </p>
+        <div className="flex justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        </div>
+      </motion.div>
+    </div>
+  );
+} 
