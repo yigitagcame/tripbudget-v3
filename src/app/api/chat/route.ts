@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { flightSearchFunction, executeFlightSearch } from '@/lib/openai-functions';
+import { transformFlightResultsToCards } from '@/lib/flight-transformer';
+import { validateFlightSearchParams, handleFlightSearchError } from '@/lib/validation';
+import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -65,6 +69,13 @@ const SYSTEM_PROMPT = `You are an AI travel assistant that helps users plan thei
 6. Give specific, actionable advice rather than generic suggestions
 7. Always reference the current trip details when making recommendations
 
+FLIGHT SEARCH CAPABILITY:
+- You can search for real flight data using the search_flights function
+- Use this function when users ask about flights, pricing, or availability
+- Always use the trip context (from, to, dates, passengers) when searching
+- Present flight results in a user-friendly format with pricing and duration
+- Include booking links when available
+
 CRITICAL: You MUST extract and update trip details from EVERY user message. If the user mentions:
 - A destination (city, country, place): update the "to" field
 - An origin location: update the "from" field  
@@ -83,7 +94,7 @@ When providing recommendations:
 - Always consider the number of passengers when making recommendations
 - Always consider the current date when making recommendations about availability, seasonal events, or time-sensitive information
 
-CRITICAL: You must respond in the following JSON format ONLY:
+CRITICAL: You must respond in the following JSON format ONLY. DO NOT include any text outside of this JSON structure:
 
 {
   "message": "Your conversational response to the user (DO NOT include the next step question here)",
@@ -136,7 +147,9 @@ FOLLOW-UP: "Could you please provide:
 - your departure city
 - the number of people traveling?"
 
-Always be helpful and provide actionable advice based on the user's specific trip details.`;
+Always be helpful and provide actionable advice based on the user's specific trip details.
+
+REMEMBER: Your response must be valid JSON only. No additional text before or after the JSON object.`;
 
 // Function to create a context summary for long conversations
 function createContextSummary(conversationHistory: ChatMessage[]): string {
@@ -177,6 +190,20 @@ function createContextSummary(conversationHistory: ChatMessage[]): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimitResult = checkRateLimit(request, chatRateLimiter);
+    
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          message: 'Rate limit exceeded. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { message, conversationHistory = [] } = body;
 
@@ -205,7 +232,7 @@ export async function POST(request: NextRequest) {
     const filteredHistory = conversationHistory
       .filter((msg: ChatMessage) => msg.content && msg.content.trim() !== '');
     
-    let messages;
+    let messages: any[];
     
     if (filteredHistory.length > MAX_MESSAGES_FOR_SUMMARY) {
       // For very long conversations, use summary + recent messages
@@ -242,15 +269,91 @@ export async function POST(request: NextRequest) {
 
 
 
-    // Call OpenAI API
+    // Call OpenAI API with function calling
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages,
       temperature: 0.7,
       max_tokens: 1500,
+      tools: [flightSearchFunction],
+      tool_choice: "auto"
     });
 
-    const aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+    let aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+    let flightCards: any[] = [];
+
+    // Handle tool calls
+    const responseMessage = completion.choices[0]?.message;
+    if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
+      console.log('API - Processing tool calls:', responseMessage.tool_calls.length);
+      
+      for (const toolCall of responseMessage.tool_calls) {
+        if (toolCall.function.name === 'search_flights') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Flight search args:', args);
+            
+            // Validate flight search parameters
+            const validationErrors = validateFlightSearchParams(args);
+            if (validationErrors.length > 0) {
+              const errorMessage = `Validation errors: ${validationErrors.join(', ')}`;
+              console.error('Flight search validation errors:', validationErrors);
+              messages.push({
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  success: false,
+                  error: errorMessage
+                }),
+                tool_call_id: toolCall.id
+              });
+              continue;
+            }
+            
+            const flightResults = await executeFlightSearch(args);
+            console.log('API - Flight search results:', flightResults.success ? 'Success' : 'Failed');
+            
+            // Transform flight results to cards
+            if (flightResults.success) {
+              flightCards = transformFlightResultsToCards(flightResults);
+            }
+            
+            // Add flight results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(flightResults),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing flight search:', error);
+            const userFriendlyError = handleFlightSearchError(error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: userFriendlyError
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        }
+      }
+      
+      // Get final response from OpenAI after tool execution
+      try {
+        const finalCompletion = await openai.chat.completions.create({
+          model: "gpt-4",
+          messages,
+          temperature: 0.7,
+          max_tokens: 1500
+        });
+        
+        aiResponseText = finalCompletion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+      } catch (finalError) {
+        console.error('Error getting final completion after tool calls:', finalError);
+        // If the final completion fails, use the original response
+        aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+      }
+    }
 
     // Parse the JSON response from AI
     let aiResponse: AIResponse;
@@ -330,7 +433,7 @@ export async function POST(request: NextRequest) {
       id: Date.now(),
       type: 'ai' as const,
       content: aiResponse.message,
-      cards: aiResponse.cards || [],
+      cards: flightCards.length > 0 ? flightCards : (aiResponse.cards || []),
       followUp: aiResponse.followUp,
       tripContext: aiResponse.tripContext,
       timestamp: new Date()
@@ -338,7 +441,15 @@ export async function POST(request: NextRequest) {
 
     console.log('API - Final response tripContext:', response.tripContext);
 
-    return NextResponse.json(response);
+    // Create response with rate limit headers
+    const nextResponse = NextResponse.json(response);
+    
+    // Add rate limit headers
+    Object.entries(rateLimitResult.headers).forEach(([key, value]) => {
+      nextResponse.headers.set(key, value);
+    });
+
+    return nextResponse;
 
   } catch (error) {
     console.error('Chat API error:', error);
