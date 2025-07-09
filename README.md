@@ -37,7 +37,14 @@ An AI-powered travel planning application that helps you create personalized iti
    
    Create a `.env.local` file in the root directory:
    ```env
+   # OpenAI Configuration
    OPENAI_API_KEY=your_openai_api_key_here
+   
+   # Tequila Flight API Configuration
+   TEQUILA_API_KEY=your_tequila_api_key_here
+   TEQUILA_BASE_URL=https://api.tequila.kiwi.com/v2
+   
+   # Supabase Configuration
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
@@ -46,6 +53,7 @@ An AI-powered travel planning application that helps you create personalized iti
 4. **Get your API keys**
 
    - **OpenAI API Key**: Sign up at [OpenAI Platform](https://platform.openai.com/api-keys)
+   - **Tequila Flight API Key**: Sign up at [Tequila Kiwi Developers](https://tequila.kiwi.com/developers) for real flight data
    - **Supabase**: Create a project at [Supabase](https://supabase.com) and get your project URL and keys
 
 5. **Run the development server**
@@ -63,6 +71,9 @@ An AI-powered travel planning application that helps you create personalized iti
 - `npm run build` - Build the application for production
 - `npm run start` - Start the production server
 - `npm run lint` - Run ESLint for code quality
+- `npm run test:tequila` - Test Tequila Flight API integration
+- `npm run test:validation` - Test validation functions
+- `npm run test:chat` - Test chat API integration
 
 ## 🏗️ Tech Stack
 
@@ -100,6 +111,8 @@ trip-budget/
 - Context-aware conversations
 - Automatic trip detail extraction
 - Structured travel recommendations
+- **Real flight data integration** via Tequila API
+- **Live pricing and availability** for flights
 
 ### Trip Management
 - Create and manage multiple trips
@@ -118,14 +131,17 @@ trip-budget/
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `OPENAI_API_KEY` | Your OpenAI API key for AI features | Yes |
+| `TEQUILA_API_KEY` | Your Tequila Flight API key for real flight data | Yes |
+| `TEQUILA_BASE_URL` | Tequila API base URL (https://api.tequila.kiwi.com/v2) | Yes |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
 
 ### API Endpoints
 
-- `POST /api/chat` - Handle chat messages with OpenAI integration
+- `POST /api/chat` - Handle chat messages with OpenAI integration and flight search
 - Real-time chat functionality via Supabase subscriptions
+- **Flight search integration** via OpenAI Function Calling
 
 ## 🚀 Deployment
 

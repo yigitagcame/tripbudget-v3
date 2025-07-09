@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:tequila": "tsx scripts/test-tequila-api.ts",
+    "test:validation": "tsx scripts/test-validation.ts",
+    "test:chat": "tsx scripts/test-chat-api.ts",
+    "test:function-calling": "tsx scripts/test-function-calling.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.3",
@@ -23,10 +27,12 @@
     "@types/node": "^20.19.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
     "sharp": "^0.34.2",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }
