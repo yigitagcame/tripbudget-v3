@@ -74,6 +74,7 @@ An AI-powered travel planning application that helps you create personalized iti
 - `npm run test:tequila` - Test Tequila Flight API integration
 - `npm run test:validation` - Test validation functions
 - `npm run test:chat` - Test chat API integration
+- `npm run test:auth` - Test authentication system
 
 ## 🏗️ Tech Stack
 
@@ -103,6 +104,45 @@ trip-budget/
 ├── public/                # Static assets
 └── ...
 ```
+
+## 🔐 Authentication
+
+The application uses Supabase for authentication with the following features:
+
+- **Protected Routes**: Chat page and API endpoints require authentication
+- **Login System**: Email/password authentication (no registration required)
+- **Session Management**: Automatic session handling with Supabase
+- **Route Protection**: Middleware-based route protection
+- **Loading States**: Smooth loading experiences during authentication checks
+
+### Authentication Flow
+
+1. **Unauthenticated Users**: Redirected to login page when accessing protected routes
+2. **Login**: Users can sign in with email and password
+3. **Protected Access**: After login, users can access the chat interface
+4. **Session Persistence**: Sessions are automatically maintained across browser sessions
+5. **Logout**: Users can sign out and will be redirected to the home page
+
+### Setting Up Authentication
+
+1. **Create a Supabase Project**:
+   - Go to [Supabase](https://supabase.com) and create a new project
+   - Get your project URL and anon key from the project settings
+
+2. **Configure Environment Variables**:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+3. **Create Users**:
+   - Use the Supabase dashboard to create user accounts
+   - Or use the Supabase CLI to manage users programmatically
+
+4. **Test Authentication**:
+   ```bash
+   npm run test:auth
+   ```
 
 ## 🎯 Core Features
 

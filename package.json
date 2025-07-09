@@ -10,9 +10,12 @@
     "test:tequila": "tsx scripts/test-tequila-api.ts",
     "test:validation": "tsx scripts/test-validation.ts",
     "test:chat": "tsx scripts/test-chat-api.ts",
-    "test:function-calling": "tsx scripts/test-function-calling.ts"
+    "test:function-calling": "tsx scripts/test-function-calling.ts",
+    "test:auth": "tsx scripts/test-auth.ts",
+    "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.3",
     "framer-motion": "^12.23.0",
     "lucide-react": "^0.525.0",

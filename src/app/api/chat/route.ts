@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createServerClient } from '@supabase/ssr';
 import { flightSearchFunction, executeFlightSearch } from '@/lib/openai-functions';
 import { transformFlightResultsToCards } from '@/lib/flight-transformer';
 import { validateFlightSearchParams, handleFlightSearchError } from '@/lib/validation';
@@ -190,6 +191,35 @@ function createContextSummary(conversationHistory: ChatMessage[]): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Create Supabase client for server-side auth
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            // This is handled by the middleware
+          },
+          remove(name: string, options: any) {
+            // This is handled by the middleware
+          },
+        },
+      }
+    );
+
+    // Check authentication
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    
+    if (authError || !session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Check rate limit
     const rateLimitResult = checkRateLimit(request, chatRateLimiter);
     

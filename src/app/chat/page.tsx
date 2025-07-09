@@ -6,6 +6,7 @@ import TripDetailsSidebar from '@/components/chat/TripDetailsSidebar';
 import TripPlanStack from '@/components/chat/TripPlanStack';
 import ChatWindow from '@/components/chat/ChatWindow';
 import { sendChatMessage, type ChatMessage, type TripDetails, type Card } from '@/lib/chat-api';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function ChatPage() {
   const [tripDetails, setTripDetails] = useState<TripDetails>({
@@ -121,56 +122,58 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full py-8">
+    <ProtectedRoute>
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full py-8">
 
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-          {/* Trip Details Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
-          >
-            <TripDetailsSidebar 
-              tripDetails={tripDetails}
-              onTripDetailsChange={handleTripDetailsChange}
-            />
-          </motion.div>
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+            {/* Trip Details Sidebar */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
+            >
+              <TripDetailsSidebar 
+                tripDetails={tripDetails}
+                onTripDetailsChange={handleTripDetailsChange}
+              />
+            </motion.div>
 
-          {/* Chat Window */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-6 h-full min-h-[500px] lg:min-h-0"
-          >
-            <ChatWindow 
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading}
-              tripDetails={tripDetails}
-              onAddToTripPlan={handleAddToTripPlan}
-            />
-          </motion.div>
+            {/* Chat Window */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="lg:col-span-6 h-full min-h-[500px] lg:min-h-0"
+            >
+              <ChatWindow 
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                tripDetails={tripDetails}
+                onAddToTripPlan={handleAddToTripPlan}
+              />
+            </motion.div>
 
-          {/* Trip Plan Stack */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
-          >
-            <TripPlanStack 
-              tripPlan={tripPlan}
-              onRemoveItem={handleRemoveFromTripPlan}
-              onAddItem={handleAddToTripPlan}
-            />
-          </motion.div>
+            {/* Trip Plan Stack */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
+            >
+              <TripPlanStack 
+                tripPlan={tripPlan}
+                onRemoveItem={handleRemoveFromTripPlan}
+                onAddItem={handleAddToTripPlan}
+              />
+            </motion.div>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 } 
