@@ -63,12 +63,10 @@ export function transformFlightResultsToCards(flightResults: any) {
     return [];
   }
   
-  // Sort flights by price (lowest first) and take top 5
-  const sortedFlights = flightResults.data
-    .sort((a: TequilaFlight, b: TequilaFlight) => a.price - b.price)
-    .slice(0, 5);
+  // The API already returns sorted results based on search type, so we just take the first 2
+  const limitedFlights = flightResults.data.slice(0, 2);
   
-  return sortedFlights.map((flight: TequilaFlight) => 
+  return limitedFlights.map((flight: TequilaFlight) => 
     transformFlightToCard(flight)
   );
 }

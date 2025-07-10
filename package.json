@@ -11,6 +11,8 @@
     "test:validation": "tsx scripts/test-validation.ts",
     "test:chat": "tsx scripts/test-chat-api.ts",
     "test:function-calling": "tsx scripts/test-function-calling.ts",
+    "test:flight-types": "tsx scripts/test-flight-search-types.ts",
+    "test:chat-flight-types": "tsx scripts/test-chat-flight-types.ts",
     "test:auth": "tsx scripts/test-auth.ts",
     "check:env": "tsx scripts/check-env.ts"
   },
