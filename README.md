@@ -44,6 +44,10 @@ An AI-powered travel planning application that helps you create personalized iti
    TEQUILA_API_KEY=your_tequila_api_key_here
    TEQUILA_BASE_URL=https://api.tequila.kiwi.com/v2
    
+   # Booking.com Accommodation API Configuration (via RapidAPI)
+   RAPIDAPI_KEY=your_rapidapi_key_here
+   RAPIDAPI_HOST=booking-com15.p.rapidapi.com
+   
    # Supabase Configuration
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -54,6 +58,7 @@ An AI-powered travel planning application that helps you create personalized iti
 
    - **OpenAI API Key**: Sign up at [OpenAI Platform](https://platform.openai.com/api-keys)
    - **Tequila Flight API Key**: Sign up at [Tequila Kiwi Developers](https://tequila.kiwi.com/developers) for real flight data
+   - **RapidAPI Key**: Sign up at [RapidAPI](https://rapidapi.com) and subscribe to the Booking.com API for accommodation data
    - **Supabase**: Create a project at [Supabase](https://supabase.com) and get your project URL and keys
 
 5. **Run the development server**
@@ -72,6 +77,9 @@ An AI-powered travel planning application that helps you create personalized iti
 - `npm run start` - Start the production server
 - `npm run lint` - Run ESLint for code quality
 - `npm run test:tequila` - Test Tequila Flight API integration
+- `npm run test:booking` - Test Booking.com Accommodation API integration
+- `npm run test:accommodation` - Test accommodation transformer functions
+- `npm run test:accommodation-integration` - Test full accommodation integration
 - `npm run test:validation` - Test validation functions
 - `npm run test:chat` - Test chat API integration
 - `npm run test:auth` - Test authentication system
@@ -153,6 +161,8 @@ The application uses Supabase for authentication with the following features:
 - Structured travel recommendations
 - **Real flight data integration** via Tequila API
 - **Live pricing and availability** for flights
+- **Real accommodation data integration** via Booking.com API
+- **Live hotel pricing and availability** for accommodations
 
 ### Trip Management
 - Create and manage multiple trips
@@ -173,15 +183,18 @@ The application uses Supabase for authentication with the following features:
 | `OPENAI_API_KEY` | Your OpenAI API key for AI features | Yes |
 | `TEQUILA_API_KEY` | Your Tequila Flight API key for real flight data | Yes |
 | `TEQUILA_BASE_URL` | Tequila API base URL (https://api.tequila.kiwi.com/v2) | Yes |
+| `RAPIDAPI_KEY` | Your RapidAPI key for Booking.com accommodation data | Yes |
+| `RAPIDAPI_HOST` | RapidAPI host for Booking.com API (booking-com15.p.rapidapi.com) | Yes |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
 
 ### API Endpoints
 
-- `POST /api/chat` - Handle chat messages with OpenAI integration and flight search
+- `POST /api/chat` - Handle chat messages with OpenAI integration, flight search, and accommodation search
 - Real-time chat functionality via Supabase subscriptions
 - **Flight search integration** via OpenAI Function Calling
+- **Accommodation search integration** via OpenAI Function Calling
 
 ## 🚀 Deployment
 
@@ -228,3 +241,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Happy Traveling! ✈️🌍**
+
+## Server-side Supabase Service Role Usage & RLS
+
+- The file `src/lib/server/trip-service-server.ts` uses the Supabase **service role key** to bypass Row Level Security (RLS) for admin/server-side operations (e.g., API routes).
+- **WARNING:** Never import this file or use the service role key in any client-side code. Exposing the service role key to the client is a critical security risk.
+- Use the regular trip service (`src/lib/trip-service.ts`) for all client-side and user-authenticated operations.
+- This pattern ensures that RLS protects user data, while server-side code can perform necessary admin operations securely.

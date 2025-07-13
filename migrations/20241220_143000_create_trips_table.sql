@@ -6,7 +6,7 @@ CREATE TABLE trips (
   destination VARCHAR(255), 
   departure_date DATE,
   return_date DATE,
-  passenger_count INTEGER DEFAULT 1,
+  passenger_count INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

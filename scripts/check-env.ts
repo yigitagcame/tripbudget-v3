@@ -8,6 +8,8 @@ const requiredEnvVars = [
   'OPENAI_API_KEY',
   'TEQUILA_API_KEY',
   'TEQUILA_BASE_URL',
+  'RAPIDAPI_KEY',
+  'RAPIDAPI_HOST',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY'
 ];
@@ -60,6 +62,7 @@ function checkEnvironmentVariables() {
     console.log('\n📚 How to get these values:');
     console.log('- OpenAI API Key: https://platform.openai.com/api-keys');
     console.log('- Tequila API Key: https://tequila.kiwi.com/developers');
+    console.log('- RapidAPI Key: https://rapidapi.com (subscribe to Booking.com API)');
     console.log('- Supabase URL & Keys: https://supabase.com (create a new project)');
     
     return false;
