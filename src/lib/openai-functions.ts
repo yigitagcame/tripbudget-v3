@@ -66,13 +66,19 @@ export const flightSearchFunction = {
           description: 'Maximum number of results (max 1000)',
           minimum: 1,
           maximum: 1000,
-          default: 50
+          default: 2
         },
         sort: {
           type: 'string',
           description: 'Sort results by',
           enum: ['price', 'duration', 'quality', 'date'],
           default: 'price'
+        },
+        search_type: {
+          type: 'string',
+          description: 'Type of flight search to perform',
+          enum: ['cheapest', 'fastest', 'best'],
+          default: 'best'
         }
       },
       required: ['fly_from', 'date_from', 'date_to']
@@ -84,13 +90,37 @@ export async function executeFlightSearch(args: any) {
   // Convert city names to airport codes for fly_from and fly_to
   if (args.fly_from) args.fly_from = convertCityToAirportCode(args.fly_from);
   if (args.fly_to) args.fly_to = convertCityToAirportCode(args.fly_to);
+  
+  // Set default search type if not provided
+  if (!args.search_type) {
+    args.search_type = 'best';
+  }
+  
+  // Configure search parameters based on search type
+  switch (args.search_type) {
+    case 'cheapest':
+      args.sort = 'price';
+      args.limit = 2;
+      break;
+    case 'fastest':
+      args.sort = 'duration';
+      args.limit = 2;
+      break;
+    case 'best':
+    default:
+      args.sort = 'quality';
+      args.limit = 2;
+      break;
+  }
+  
   try {
     const result = await searchFlights(args);
     return {
       success: true,
       data: result.data,
       currency: result.currency,
-      search_id: result.search_id
+      search_id: result.search_id,
+      search_type: args.search_type
     };
   } catch (error) {
     return {

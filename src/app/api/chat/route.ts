@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient } from '@supabase/ssr';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { flightSearchFunction, executeFlightSearch } from '@/lib/openai-functions';
 import { transformFlightResultsToCards } from '@/lib/flight-transformer';
 import { validateFlightSearchParams, handleFlightSearchError } from '@/lib/validation';
 import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
+import { tripService } from '@/lib/trip-service';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -40,9 +41,15 @@ interface Card {
 
 interface AIResponse {
   message: string;
-  cards?: Card[];
-  followUp: string;
-  tripContext: TripDetails;
+  suggestions?: Array<{
+    type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'place';
+    title: string;
+    description: string;
+    price?: string;
+    location?: string;
+  }>;
+  "follow-up message": string;
+  "trip-context": TripDetails;
 }
 
 // Function to get current date in a readable format
@@ -57,100 +64,70 @@ function getCurrentDateString(): string {
   return now.toLocaleDateString('en-US', options);
 }
 
+// Function to sanitize JSON response from AI
+function sanitizeJSONResponse(text: string): string {
+  return text
+    .replace(/^```json\s*/i, '')
+    .replace(/^```/, '')
+    .replace(/```$/, '')
+    .trim();
+}
+
 
 
 // System prompt for the AI travel assistant
-const SYSTEM_PROMPT = `You are an AI travel assistant that helps users plan their trips. You should:
+const SYSTEM_PROMPT = `You are an AI travel assistant that helps users plan their trips.
 
-1. Extract and maintain trip context from EVERY user message
-2. Provide helpful, personalized travel recommendations based on the specific trip details
-3. Be conversational and friendly
-4. Ask follow-up questions when needed
-5. Provide realistic pricing and details based on the destination and context
-6. Give specific, actionable advice rather than generic suggestions
-7. Always reference the current trip details when making recommendations
+CRITICAL: You MUST respond using ONLY a valid JSON object. Do NOT include any text outside the JSON. Do NOT include backticks or markdown.
 
-FLIGHT SEARCH CAPABILITY:
-- You can search for real flight data using the search_flights function
-- Use this function when users ask about flights, pricing, or availability
-- Always use the trip context (from, to, dates, passengers) when searching
-- Present flight results in a user-friendly format with pricing and duration
-- Include booking links when available
-
-CRITICAL: You MUST extract and update trip details from EVERY user message. If the user mentions:
-- A destination (city, country, place): update the "to" field
-- An origin location: update the "from" field  
-- Travel dates (month, year, specific dates): update "departDate" and "returnDate"
-- Number of travelers: update the "passengers" field
-
-You are responsible for maintaining the complete trip context throughout the conversation. Always preserve existing trip details and add new information as it becomes available.
-
-IMPORTANT: You must always consider the current trip context when responding. If trip details are provided, base ALL your recommendations on those specific details. If the user asks about something that doesn't match the current trip context, gently remind them of the current trip details and ask if they want to change their plans.
-
-When providing recommendations:
-- For flights: mention realistic airlines, duration, and price ranges for the specific route
-- For hotels: suggest appropriate accommodation types and price ranges for the destination
-- For restaurants: recommend cuisine types and price ranges typical for the location
-- For activities: suggest relevant attractions and experiences for the destination
-- Always consider the number of passengers when making recommendations
-- Always consider the current date when making recommendations about availability, seasonal events, or time-sensitive information
-
-CRITICAL: You must respond in the following JSON format ONLY. DO NOT include any text outside of this JSON structure:
-
+RESPONSE FORMAT:
 {
-  "message": "Your conversational response to the user (DO NOT include the next step question here)",
-  "cards": [
+  "message": "Your conversational response to the user",
+  "suggestions": [
     {
-      "type": "flight|hotel|restaurant|activity|transport|place",
-      "title": "Name of the recommendation",
+      "type": "flight|hotel|restaurant|activity|place",
+      "title": "Name",
       "description": "Brief description",
-      "price": "Price range or specific price",
-      "rating": 4.5,
-      "location": "Location details",
-      "image": "URL to image (optional)",
-      "bookingUrl": "URL to booking page (optional)"
+      "price": "Price range",
+      "location": "Location"
     }
   ],
-  "followUp": "The specific next step or follow-up question (this will be displayed separately in the Next Steps section)",
-  "tripContext": {
-    "from": "Updated origin location",
-    "to": "Updated destination", 
-    "departDate": "Updated departure date (YYYY-MM-DD)",
-    "returnDate": "Updated return date (YYYY-MM-DD)",
-    "passengers": 2
+  "follow-up message": "Your follow-up question or next step",
+  "trip-context": {
+    "from": "origin location or empty string",
+    "to": "destination or empty string", 
+    "departDate": "YYYY-MM-DD or empty string",
+    "returnDate": "YYYY-MM-DD or empty string",
+    "passengers": 0
   }
 }
 
-MANDATORY: You MUST ALWAYS include the tripContext field in your response, even if no trip details are known. If no trip details are available, use empty strings for text fields and 0 for passengers.
+TRIP CONTEXT:
+- Extract destination from user messages → update "to" field
+- Extract origin from user messages → update "from" field  
+- Extract dates from user messages → update "departDate" and "returnDate"
+- Extract number of travelers → update "passengers"
+- Preserve existing trip context from system prompt
+- Only update fields when user provides new information
 
-The cards array is optional - only include it when you want to suggest specific places, flights, hotels, etc. The tripContext should always reflect the current trip details, updating them if new information is provided in the user's message.
+SUGGESTIONS:
+- Include suggestions array when user asks about flights, hotels, restaurants, activities, or places
+- Leave suggestions empty array [] if no specific recommendations needed
 
-IMPORTANT FOR FOLLOW-UP: The "followUp" field should contain the specific next step or question, separate from your main message. The main message should be conversational, and the followUp should be the actionable part. 
+FLIGHT SEARCH:
+- Use search_flights function when users ask about flights
+- Always use current trip context for searches
+- Detect user preferences for flight search type:
+  * "cheapest" - when user asks for cheapest, lowest price, budget options
+  * "fastest" - when user asks for fastest, quickest, shortest duration
+  * "best" - when user asks for best, premium, or doesn't specify (default)
+- Limit results to 2 flights per search to avoid overwhelming the user
 
-FORMATTING RULES:
-- If asking for multiple pieces of information, format as a bulleted list
-- Use "- " for each bullet point
-- Keep each bullet point concise and clear
+Be helpful, conversational, and always consider the current trip context when making recommendations.`;
 
-For example:
 
-MESSAGE: "That sounds like a fantastic idea! Riga is a beautiful city especially during the summer."
-FOLLOW-UP: "To provide the best assistance, could you please provide me with:
-- the dates of your travel
-- the city you'll be traveling from
-- the number of people joining the trip?"
 
-MESSAGE: "I found some great flight options for your trip to Tokyo!"
-FOLLOW-UP: "Would you like me to help you find hotels in Tokyo, or would you prefer to explore activities first?"
 
-MESSAGE: "Paris in March is absolutely magical! The weather is starting to warm up and the crowds are smaller than peak season."
-FOLLOW-UP: "Could you please provide:
-- your departure city
-- the number of people traveling?"
-
-Always be helpful and provide actionable advice based on the user's specific trip details.
-
-REMEMBER: Your response must be valid JSON only. No additional text before or after the JSON object.`;
 
 // Function to create a context summary for long conversations
 function createContextSummary(conversationHistory: ChatMessage[]): string {
@@ -192,26 +169,15 @@ function createContextSummary(conversationHistory: ChatMessage[]): string {
 export async function POST(request: NextRequest) {
   try {
     // Create Supabase client for server-side auth
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
-          },
-          set(name: string, value: string, options: any) {
-            // This is handled by the middleware
-          },
-          remove(name: string, options: any) {
-            // This is handled by the middleware
-          },
-        },
-      }
-    );
+    const supabase = createSupabaseServerClient(request);
 
     // Check authentication
     const { data: { session }, error: authError } = await supabase.auth.getSession();
+    
+    console.log('API - Auth cookies:', request.cookies.getAll().filter(c => c.name.includes('auth')).map(c => c.name));
+    console.log('API - Session exists:', !!session);
+    console.log('API - Session user:', session?.user?.email);
+    console.log('API - Auth error:', authError);
     
     if (authError || !session) {
       return NextResponse.json(
@@ -235,7 +201,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { message, conversationHistory = [] } = body;
+    const { message, conversationHistory = [], tripId } = body;
 
     console.log('API - Received message:', message);
     console.log('API - Received conversation history length:', conversationHistory.length);
@@ -254,6 +220,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Create trip on first message
+    let currentTripId = tripId;
+    if (!currentTripId && conversationHistory.length === 0) {
+      currentTripId = await tripService.createTrip(session.user.id);
+      if (!currentTripId) {
+        return NextResponse.json(
+          { error: 'Failed to create trip' },
+          { status: 500 }
+        );
+      }
+    }
+
+
 
     // Prepare conversation history for OpenAI with length limits
     const MAX_CONVERSATION_MESSAGES = 20; // Limit to last 20 messages to manage token usage
@@ -293,20 +273,23 @@ export async function POST(request: NextRequest) {
 
     // Always include current date in the system prompt
     const currentDate = getCurrentDateString();
-    const tripContext = `\n\nCURRENT DATE: ${currentDate}\n\nHelp the user establish their travel plans by asking about destinations, dates, and number of travelers. Always extract and maintain trip context from the conversation.`;
+    const baseContext = `\n\nCURRENT DATE: ${currentDate}\n\nHelp the user establish their travel plans by asking about destinations, dates, and number of travelers. Always extract and maintain trip context from the conversation.`;
     
-    messages[0].content += tripContext;
+    messages[0].content += baseContext;
 
 
 
-    // Call OpenAI API with function calling
+
+
+    // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages,
       temperature: 0.7,
       max_tokens: 1500,
       tools: [flightSearchFunction],
-      tool_choice: "auto"
+      tool_choice: "auto",
+      response_format: { type: "json_object" }
     });
 
     let aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
@@ -316,6 +299,13 @@ export async function POST(request: NextRequest) {
     const responseMessage = completion.choices[0]?.message;
     if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
       console.log('API - Processing tool calls:', responseMessage.tool_calls.length);
+      
+      // Add the assistant message with tool calls to the conversation
+      messages.push({
+        role: 'assistant' as const,
+        content: responseMessage.content || '',
+        tool_calls: responseMessage.tool_calls
+      });
       
       for (const toolCall of responseMessage.tool_calls) {
         if (toolCall.function.name === 'search_flights') {
@@ -371,91 +361,72 @@ export async function POST(request: NextRequest) {
       // Get final response from OpenAI after tool execution
       try {
         const finalCompletion = await openai.chat.completions.create({
-          model: "gpt-4",
+          model: "gpt-4o",
           messages,
           temperature: 0.7,
-          max_tokens: 1500
+          max_tokens: 1500,
+          response_format: { type: "json_object" }
         });
         
         aiResponseText = finalCompletion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
       } catch (finalError) {
         console.error('Error getting final completion after tool calls:', finalError);
-        // If the final completion fails, use the original response
-        aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+        // If the final completion fails, try one more time with explicit JSON format
+        try {
+          const fallbackCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              { role: 'system', content: 'You MUST respond using ONLY a valid JSON object. Do NOT include any text outside the JSON. Use the flight search results provided to create a helpful response.' },
+              { role: 'user', content: message },
+              ...messages.slice(-2) // Include the last assistant and tool messages
+            ],
+            temperature: 0.7,
+            max_tokens: 1500,
+            response_format: { type: "json_object" }
+          });
+          aiResponseText = fallbackCompletion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+        } catch (fallbackError) {
+          console.error('Fallback completion also failed:', fallbackError);
+          // Use the original response if available, otherwise create a simple response
+          aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+        }
       }
     }
 
     // Parse the JSON response from AI
     let aiResponse: AIResponse;
     try {
-      // First, try to parse the entire response as JSON
-      try {
-        const directParse = JSON.parse(aiResponseText);
-        if (directParse.message && directParse.tripContext) {
-          // The AI returned a complete JSON response
-          aiResponse = directParse;
-          console.log('API - Direct JSON parse successful, tripContext:', aiResponse.tripContext);
-        } else {
-          throw new Error('Not a complete AI response');
-        }
-      } catch (directParseError) {
-        // If direct parse fails, try to extract JSON from the response
-        const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          aiResponse = JSON.parse(jsonMatch[0]);
-          console.log('API - Extracted JSON parse successful, tripContext:', aiResponse.tripContext);
-        } else {
-          throw new Error('No JSON found in response');
-        }
-      }
-      
-      // Validate that followUp is present and not empty
-      if (!aiResponse.followUp || aiResponse.followUp.trim() === '') {
-        console.warn('AI response missing followUp, generating one from message');
-        // Try to extract a follow-up from the message content
-        const messageContent = aiResponse.message || aiResponseText;
-        if (messageContent.includes('Could you') || messageContent.includes('Please') || messageContent.includes('Would you')) {
-          // Extract the question part
-          const questionMatch = messageContent.match(/(Could you|Please|Would you)[^.!?]*[.!?]?/);
-          aiResponse.followUp = questionMatch ? questionMatch[0].trim() : "What would you like to know about your trip?";
-        } else {
-          aiResponse.followUp = "What would you like to know about your trip?";
-        }
-      }
+      console.log('Raw AI response:', JSON.stringify(aiResponseText));
+      const sanitizedResponse = sanitizeJSONResponse(aiResponseText);
+      aiResponse = JSON.parse(sanitizedResponse);
     } catch (error) {
       console.error('Error parsing AI response:', error);
-      console.error('Raw AI response:', aiResponseText);
-      // Fallback response
+      console.error('Raw AI response:', JSON.stringify(aiResponseText));
+      
+      // Create a fallback response if JSON parsing fails
       aiResponse = {
-        message: aiResponseText,
-        followUp: "Could you please tell me where you'd like to go and when you're planning to travel?",
-        tripContext: {
-          from: '',
-          to: '',
-          departDate: '',
-          returnDate: '',
+        message: "I found some flight options for you! Here are the details:",
+        suggestions: [],
+        "follow-up message": "Would you like me to search for more options or help you with anything else?",
+        "trip-context": {
+          from: "",
+          to: "",
+          departDate: "",
+          returnDate: "",
           passengers: 0
         }
       };
     }
 
-    // Validate and ensure all required fields are present
-    if (!aiResponse.message || aiResponse.message.trim() === '') {
-      aiResponse.message = "I'm here to help you plan your trip!";
-    }
-    
-    if (!aiResponse.followUp || aiResponse.followUp.trim() === '') {
-      aiResponse.followUp = "Could you please tell me where you'd like to go and when you're planning to travel?";
-    }
-    
-    if (!aiResponse.tripContext) {
-      aiResponse.tripContext = {
-        from: '',
-        to: '',
-        departDate: '',
-        returnDate: '',
-        passengers: 0
-      };
+    // Update trip if AI provided new details
+    if (currentTripId && aiResponse["trip-context"]) {
+      await tripService.updateTrip(currentTripId, {
+        origin: aiResponse["trip-context"].from,
+        destination: aiResponse["trip-context"].to,
+        departure_date: aiResponse["trip-context"].departDate,
+        return_date: aiResponse["trip-context"].returnDate,
+        passenger_count: aiResponse["trip-context"].passengers
+      });
     }
 
     // Create the response object
@@ -463,9 +434,10 @@ export async function POST(request: NextRequest) {
       id: Date.now(),
       type: 'ai' as const,
       content: aiResponse.message,
-      cards: flightCards.length > 0 ? flightCards : (aiResponse.cards || []),
-      followUp: aiResponse.followUp,
-      tripContext: aiResponse.tripContext,
+      cards: flightCards.length > 0 ? flightCards : (aiResponse.suggestions || []),
+      followUp: aiResponse["follow-up message"],
+      tripContext: aiResponse["trip-context"],
+      tripId: currentTripId,
       timestamp: new Date()
     };
 

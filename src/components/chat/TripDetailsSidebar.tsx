@@ -58,6 +58,11 @@ export default function TripDetailsSidebar({ tripDetails, onTripDetailsChange }:
             <p className="text-gray-500 text-sm leading-relaxed">
               Start chatting with the AI assistant about your trip! Tell us where you want to go, when you're traveling, and how many people are coming.
             </p>
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Tip:</strong> The AI will remember your trip details throughout the conversation and use them for personalized recommendations.
+              </p>
+            </div>
             <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
               <h4 className="font-semibold text-gray-900 mb-2 text-sm">Try asking:</h4>
               <ul className="text-xs text-gray-600 space-y-1">
@@ -70,6 +75,19 @@ export default function TripDetailsSidebar({ tripDetails, onTripDetailsChange }:
         ) : (
           /* Trip Details Display */
           <div className="space-y-4">
+            {/* AI Context Indicator */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200"
+            >
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-xs text-green-700 font-medium">
+                  AI has trip context and will provide personalized recommendations
+                </p>
+              </div>
+            </motion.div>
             {/* From */}
             {tripDetails.from && (
               <motion.div

@@ -31,6 +31,7 @@ export interface Card {
 export interface ChatRequest {
   message: string;
   conversationHistory: ChatMessage[];
+  tripId?: string; // Add tripId to request
 }
 
 export interface ChatResponse {
@@ -41,6 +42,7 @@ export interface ChatResponse {
   cards: Card[];
   followUp: string;
   tripContext: TripDetails;
+  tripId?: string; // Add tripId to response
 }
 
 // Function to send a message to the chat API
