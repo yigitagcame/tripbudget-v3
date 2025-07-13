@@ -2,6 +2,103 @@
  * Validation functions for flight search parameters
  */
 
+/**
+ * Validation functions for accommodation search parameters
+ */
+export function validateAccommodationSearchParams(params: any): string[] {
+  const errors: string[] = [];
+  
+  if (!params.destination) errors.push('Destination is required');
+  if (!params.arrival_date) errors.push('Arrival date is required');
+  if (!params.departure_date) errors.push('Departure date is required');
+  
+  // Validate date format (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (params.arrival_date && !dateRegex.test(params.arrival_date)) {
+    errors.push('Arrival date format must be YYYY-MM-DD');
+  }
+  if (params.departure_date && !dateRegex.test(params.departure_date)) {
+    errors.push('Departure date format must be YYYY-MM-DD');
+  }
+  
+  // Validate date logic
+  if (params.arrival_date && params.departure_date) {
+    const arrivalDate = new Date(params.arrival_date);
+    const departureDate = new Date(params.departure_date);
+    
+    if (isNaN(arrivalDate.getTime()) || isNaN(departureDate.getTime())) {
+      errors.push('Invalid date format');
+    } else if (arrivalDate >= departureDate) {
+      errors.push('Arrival date must be before departure date');
+    }
+    
+    // Check if dates are in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (arrivalDate < today) {
+      errors.push('Arrival date cannot be in the past');
+    }
+    if (departureDate < today) {
+      errors.push('Departure date cannot be in the past');
+    }
+  }
+  
+  // Validate guest numbers
+  if (params.adults && (params.adults < 1 || params.adults > 30)) {
+    errors.push('Number of adults must be between 1 and 30');
+  }
+  if (params.room_qty && (params.room_qty < 1 || params.room_qty > 30)) {
+    errors.push('Number of rooms must be between 1 and 30');
+  }
+  
+  // Validate children ages if provided
+  if (params.children_age && typeof params.children_age === 'string') {
+    const ages = params.children_age.split(',').map((age: string) => parseInt(age.trim()));
+    if (ages.some((age: number) => isNaN(age) || age < 0 || age > 17)) {
+      errors.push('Children ages must be between 0 and 17');
+    }
+  }
+  
+  // Validate search type
+  if (params.search_type && !['budget', 'luxury', 'best'].includes(params.search_type)) {
+    errors.push('Search type must be budget, luxury, or best');
+  }
+  
+  return errors;
+}
+
+/**
+ * Handle accommodation search errors and return user-friendly messages
+ */
+export function handleAccommodationSearchError(error: any): string {
+  if (error.message.includes('No destinations found')) {
+    return 'I couldn\'t find that destination. Please try using a different location name.';
+  }
+  if (error.message.includes('No hotels found')) {
+    return 'No hotels available for your search criteria. Please try different dates or location.';
+  }
+  if (error.message.includes('400')) {
+    return 'There was an issue with the search parameters. Please check your dates and destination.';
+  }
+  if (error.message.includes('401')) {
+    return 'There was an authentication error with the accommodation search service. Please try again later.';
+  }
+  if (error.message.includes('429')) {
+    return 'The accommodation search service is currently busy. Please try again in a few minutes.';
+  }
+  if (error.message.includes('500')) {
+    return 'The accommodation search service is temporarily unavailable. Please try again later.';
+  }
+  if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+    return 'Network connection error. Please check your internet connection and try again.';
+  }
+  if (error.message.includes('timeout')) {
+    return 'The request timed out. Please try again.';
+  }
+  return 'Sorry, I encountered an error while searching for accommodations. Please try again.';
+}
+
 export function validateFlightSearchParams(params: any): string[] {
   const errors: string[] = [];
   

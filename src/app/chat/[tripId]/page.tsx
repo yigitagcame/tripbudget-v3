@@ -42,6 +42,7 @@ export default function ChatPage() {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
 
   // Load trip data on component mount
   useEffect(() => {
@@ -49,6 +50,46 @@ export default function ChatPage() {
       loadTrip();
     }
   }, [tripId, user]);
+
+  // Set up realtime subscription for trip changes
+  useEffect(() => {
+    if (tripId && user) {
+      console.log('ChatPage - Setting up realtime subscription for trip:', tripId);
+      
+      const subscription = tripService.subscribeToTrip(tripId, (updatedTrip) => {
+        console.log('ChatPage - Realtime trip update received:', updatedTrip);
+        
+        if (updatedTrip) {
+          // Update trip state
+          setTrip(updatedTrip);
+          
+          // Update trip details from database
+          const updatedTripDetails = {
+            from: updatedTrip.origin || '',
+            to: updatedTrip.destination || '',
+            departDate: updatedTrip.departure_date || '',
+            returnDate: updatedTrip.return_date || '',
+            passengers: updatedTrip.passenger_count || 0
+          };
+          
+          console.log('ChatPage - Updated trip details from realtime:', updatedTripDetails);
+          setTripDetails(updatedTripDetails);
+        } else {
+          // Trip was deleted, redirect to trips page
+          console.log('ChatPage - Trip was deleted, redirecting to trips page');
+          router.push('/trips');
+        }
+      });
+
+      setRealtimeSubscription(subscription);
+
+      // Cleanup subscription on unmount or when tripId/user changes
+      return () => {
+        console.log('ChatPage - Cleaning up realtime subscription');
+        tripService.unsubscribe(subscription);
+      };
+    }
+  }, [tripId, user, router]);
 
   const loadTrip = async () => {
     try {
@@ -67,12 +108,12 @@ export default function ChatPage() {
         setTripDetails(loadedTripDetails);
       } else {
         // Redirect if trip doesn't exist or user doesn't own it
-        router.push('/chat');
+        router.push('/trips');
         return;
       }
     } catch (error) {
       console.error('Error loading trip:', error);
-      router.push('/chat');
+      router.push('/trips');
       return;
     } finally {
       setLoading(false);
@@ -126,11 +167,25 @@ export default function ChatPage() {
       
       // Validate AI response before adding to messages
       if (aiResponse && aiResponse.content && typeof aiResponse.content === 'string') {
-        // Update trip details from AI response
+        // Update trip details from AI response (only if there are actual changes)
         if (aiResponse.tripContext) {
-          console.log('ChatPage - Updating trip details from AI response:', aiResponse.tripContext);
-          console.log('ChatPage - Previous trip details:', tripDetails);
-          setTripDetails(aiResponse.tripContext);
+          console.log('ChatPage - Received trip context from AI response:', aiResponse.tripContext);
+          console.log('ChatPage - Current trip details:', tripDetails);
+          
+          // Only update if there are actual changes to avoid unnecessary re-renders
+          const hasChanges = 
+            aiResponse.tripContext.from !== tripDetails.from ||
+            aiResponse.tripContext.to !== tripDetails.to ||
+            aiResponse.tripContext.departDate !== tripDetails.departDate ||
+            aiResponse.tripContext.returnDate !== tripDetails.returnDate ||
+            aiResponse.tripContext.passengers !== tripDetails.passengers;
+          
+          if (hasChanges) {
+            console.log('ChatPage - Updating trip details with changes:', aiResponse.tripContext);
+            setTripDetails(aiResponse.tripContext);
+          } else {
+            console.log('ChatPage - No changes detected in trip context');
+          }
         } else {
           console.log('ChatPage - No tripContext in AI response');
         }
@@ -193,10 +248,10 @@ export default function ChatPage() {
           <div className="text-center">
             <p className="text-gray-600 mb-4">Trip not found</p>
             <button 
-              onClick={() => router.push('/chat')}
+              onClick={() => router.push('/trips')}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Start New Trip
+              View My Trips
             </button>
           </div>
         </div>
@@ -208,10 +263,7 @@ export default function ChatPage() {
     <ProtectedRoute>
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full py-8">
-          {/* Trip ID Display */}
-          <div className="mb-4 text-center">
-            <p className="text-sm text-gray-500">Trip ID: {tripId}</p>
-          </div>
+
 
           {/* Main Content */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">

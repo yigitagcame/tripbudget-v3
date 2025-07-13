@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { flightSearchFunction, executeFlightSearch } from '@/lib/openai-functions';
+import { flightSearchFunction, executeFlightSearch, accommodationSearchFunction, executeAccommodationSearch } from '@/lib/openai-functions';
 import { transformFlightResultsToCards } from '@/lib/flight-transformer';
-import { validateFlightSearchParams, handleFlightSearchError } from '@/lib/validation';
+import { transformAccommodationResultsToCards } from '@/lib/accommodation-transformer';
+import { validateFlightSearchParams, handleFlightSearchError, validateAccommodationSearchParams, handleAccommodationSearchError } from '@/lib/validation';
 import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
-import { tripService } from '@/lib/trip-service';
+// NOTE: We use the server-side trip service here because the API route needs to bypass RLS for trip verification and updates.
+// This service uses the Supabase service role key and MUST NEVER be imported in client-side code.
+import { tripServiceServer } from '@/lib/server/trip-service-server';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -103,12 +106,13 @@ RESPONSE FORMAT:
 }
 
 TRIP CONTEXT:
-- Extract destination from user messages → update "to" field
-- Extract origin from user messages → update "from" field  
-- Extract dates from user messages → update "departDate" and "returnDate"
-- Extract number of travelers → update "passengers"
-- Preserve existing trip context from system prompt
-- Only update fields when user provides new information
+- CRITICAL: If trip context is provided in the system prompt, you MUST preserve it and only update fields when the user explicitly provides new information
+- Extract destination from user messages → update "to" field (only if not already set or user provides new destination)
+- Extract origin from user messages → update "from" field (only if not already set or user provides new origin)
+- Extract dates from user messages → update "departDate" and "returnDate" (only if not already set or user provides new dates)
+- Extract number of travelers → update "passengers" (only if not already set or user provides new passenger count)
+- NEVER overwrite existing trip context unless the user explicitly provides new information
+- Always use the existing trip context as the foundation for your recommendations
 
 SUGGESTIONS:
 - Include suggestions array when user asks about flights, hotels, restaurants, activities, or places
@@ -122,6 +126,15 @@ FLIGHT SEARCH:
   * "fastest" - when user asks for fastest, quickest, shortest duration
   * "best" - when user asks for best, premium, or doesn't specify (default)
 - Limit results to 2 flights per search to avoid overwhelming the user
+
+ACCOMMODATION SEARCH:
+- Use search_accommodation function when users ask about hotels, accommodations, places to stay
+- Always use current trip context for searches
+- Detect user preferences for accommodation search type:
+  * "budget" - when user asks for budget, cheap, affordable, low-cost options
+  * "luxury" - when user asks for luxury, premium, high-end, 5-star options
+  * "best" - when user asks for best, recommended, or doesn't specify (default)
+- Limit results to 3 hotels per search to provide good options
 
 Be helpful, conversational, and always consider the current trip context when making recommendations.`;
 
@@ -166,6 +179,28 @@ function createContextSummary(conversationHistory: ChatMessage[]): string {
   return summary.length > 0 ? `Context: ${summary.join('. ')}` : '';
 }
 
+// Function to create trip context string from database data
+function createTripContextString(tripData: any): string {
+  if (!tripData) {
+    return '';
+  }
+
+  const hasExistingContext = tripData.origin || tripData.destination || tripData.departure_date || tripData.return_date || tripData.passenger_count;
+  
+  if (!hasExistingContext) {
+    return '';
+  }
+
+  return `\n\nCURRENT TRIP CONTEXT FROM DATABASE:
+From: ${tripData.origin || 'Not specified'}
+To: ${tripData.destination || 'Not specified'}
+Departure Date: ${tripData.departure_date || 'Not specified'}
+Return Date: ${tripData.return_date || 'Not specified'}
+Passengers: ${tripData.passenger_count || 0}
+
+CRITICAL: You MUST preserve and build upon these existing trip details. Only update fields when the user provides new information. Always consider these details when making recommendations.`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Create Supabase client for server-side auth
@@ -205,6 +240,7 @@ export async function POST(request: NextRequest) {
 
     console.log('API - Received message:', message);
     console.log('API - Received conversation history length:', conversationHistory.length);
+    console.log('API - Received tripId:', tripId);
 
     // Validate conversation history is an array
     if (!Array.isArray(conversationHistory)) {
@@ -221,19 +257,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create trip on first message
-    let currentTripId = tripId;
-    if (!currentTripId && conversationHistory.length === 0) {
-      currentTripId = await tripService.createTrip(session.user.id);
-      if (!currentTripId) {
-        return NextResponse.json(
-          { error: 'Failed to create trip' },
-          { status: 500 }
-        );
-      }
+    // Validate tripId is provided
+    if (!tripId) {
+      return NextResponse.json(
+        { error: 'Trip ID is required' },
+        { status: 400 }
+      );
     }
 
+    // Verify trip exists and belongs to user
+    console.log('API - Verifying trip exists and belongs to user');
+    const trip = await tripServiceServer.getTrip(tripId);
+    console.log('API - Trip found:', !!trip);
+    console.log('API - Trip user_id:', trip?.user_id);
+    console.log('API - Session user_id:', session.user.id);
+    
+    if (!trip || trip.user_id !== session.user.id) {
+      console.log('API - Trip verification failed - trip not found or access denied');
+      return NextResponse.json(
+        { error: 'Trip not found or access denied' },
+        { status: 404 }
+      );
+    }
+    
+    console.log('API - Trip verification successful');
 
+    const currentTripId = tripId;
+
+    // Load existing trip context from database
+    const existingTripContext = createTripContextString(trip);
+    console.log('API - Existing trip context loaded:', existingTripContext ? 'Yes' : 'No');
 
     // Prepare conversation history for OpenAI with length limits
     const MAX_CONVERSATION_MESSAGES = 20; // Limit to last 20 messages to manage token usage
@@ -250,7 +303,7 @@ export async function POST(request: NextRequest) {
       const recentMessages = filteredHistory.slice(-10); // Keep last 10 messages
       
       messages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT + '\n\n' + contextSummary },
+        { role: 'system' as const, content: SYSTEM_PROMPT + '\n\n' + contextSummary + existingTripContext },
         ...recentMessages.map((msg: ChatMessage) => ({
           role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
           content: msg.content.trim()
@@ -262,7 +315,7 @@ export async function POST(request: NextRequest) {
       const limitedHistory = filteredHistory.slice(-MAX_CONVERSATION_MESSAGES);
       
       messages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT },
+        { role: 'system' as const, content: SYSTEM_PROMPT + existingTripContext },
         ...limitedHistory.map((msg: ChatMessage) => ({
           role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
           content: msg.content.trim()
@@ -287,13 +340,14 @@ export async function POST(request: NextRequest) {
       messages,
       temperature: 0.7,
       max_tokens: 1500,
-      tools: [flightSearchFunction],
+      tools: [flightSearchFunction, accommodationSearchFunction],
       tool_choice: "auto",
       response_format: { type: "json_object" }
     });
 
     let aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
     let flightCards: any[] = [];
+    let accommodationCards: any[] = [];
 
     // Handle tool calls
     const responseMessage = completion.choices[0]?.message;
@@ -346,6 +400,53 @@ export async function POST(request: NextRequest) {
           } catch (error) {
             console.error('Error executing flight search:', error);
             const userFriendlyError = handleFlightSearchError(error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: userFriendlyError
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'search_accommodation') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Accommodation search args:', args);
+            
+            // Validate accommodation search parameters
+            const validationErrors = validateAccommodationSearchParams(args);
+            if (validationErrors.length > 0) {
+              const errorMessage = `Validation errors: ${validationErrors.join(', ')}`;
+              console.error('Accommodation search validation errors:', validationErrors);
+              messages.push({
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  success: false,
+                  error: errorMessage
+                }),
+                tool_call_id: toolCall.id
+              });
+              continue;
+            }
+            
+            const accommodationResults = await executeAccommodationSearch(args);
+            console.log('API - Accommodation search results:', accommodationResults.success ? 'Success' : 'Failed');
+            
+            // Transform accommodation results to cards
+            if (accommodationResults.success && accommodationResults.data) {
+              accommodationCards = transformAccommodationResultsToCards(accommodationResults.data);
+            }
+            
+            // Add accommodation results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(accommodationResults),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing accommodation search:', error);
+            const userFriendlyError = handleAccommodationSearchError(error);
             messages.push({
               role: 'tool' as const,
               content: JSON.stringify({
@@ -418,25 +519,56 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Update trip if AI provided new details
+    // Update trip if AI provided new details that are different from existing data
     if (currentTripId && aiResponse["trip-context"]) {
-      await tripService.updateTrip(currentTripId, {
-        origin: aiResponse["trip-context"].from,
-        destination: aiResponse["trip-context"].to,
-        departure_date: aiResponse["trip-context"].departDate,
-        return_date: aiResponse["trip-context"].returnDate,
-        passenger_count: aiResponse["trip-context"].passengers
-      });
+      const newContext = aiResponse["trip-context"];
+      const updates: any = {};
+      let hasChanges = false;
+
+      // Only update fields that have new values and are different from existing data
+      if (newContext.from && newContext.from !== trip.origin) {
+        updates.origin = newContext.from;
+        hasChanges = true;
+      }
+      if (newContext.to && newContext.to !== trip.destination) {
+        updates.destination = newContext.to;
+        hasChanges = true;
+      }
+      if (newContext.departDate && newContext.departDate !== trip.departure_date) {
+        updates.departure_date = newContext.departDate;
+        hasChanges = true;
+      }
+      if (newContext.returnDate && newContext.returnDate !== trip.return_date) {
+        updates.return_date = newContext.returnDate;
+        hasChanges = true;
+      }
+      if (newContext.passengers && newContext.passengers !== trip.passenger_count) {
+        updates.passenger_count = newContext.passengers;
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        console.log('API - Updating trip with new context:', updates);
+        await tripServiceServer.updateTrip(currentTripId, updates);
+      } else {
+        console.log('API - No changes detected in trip context');
+      }
     }
 
-    // Create the response object
+    // Create the response object with actual database trip context
     const response = {
       id: Date.now(),
       type: 'ai' as const,
       content: aiResponse.message,
-      cards: flightCards.length > 0 ? flightCards : (aiResponse.suggestions || []),
+      cards: flightCards.length > 0 ? flightCards : accommodationCards.length > 0 ? accommodationCards : (aiResponse.suggestions || []),
       followUp: aiResponse["follow-up message"],
-      tripContext: aiResponse["trip-context"],
+      tripContext: {
+        from: trip.origin || '',
+        to: trip.destination || '',
+        departDate: trip.departure_date || '',
+        returnDate: trip.return_date || '',
+        passengers: trip.passenger_count || 0
+      },
       tripId: currentTripId,
       timestamp: new Date()
     };
