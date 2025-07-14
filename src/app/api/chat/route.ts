@@ -25,6 +25,7 @@ import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
 // NOTE: We use the server-side trip service here because the API route needs to bypass RLS for trip verification and updates.
 // This service uses the Supabase service role key and MUST NEVER be imported in client-side code.
 import { tripServiceServer } from '@/lib/server/trip-service-server';
+import { MessageService } from '@/lib/message-service';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -391,8 +392,16 @@ export async function POST(request: NextRequest) {
     
     messages[0].content += baseContext;
 
-
-
+    // Store the user message in the database
+    await MessageService.createMessage({
+      trip_id: currentTripId,
+      user_id: session.user.id,
+      type: 'user',
+      content: message,
+      cards: undefined,
+      follow_up: undefined,
+      trip_context: undefined
+    });
 
 
     // Call OpenAI API
@@ -744,6 +753,17 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('API - Final response tripContext:', response.tripContext);
+
+    // After parsing aiResponse and before returning response:
+    await MessageService.createMessage({
+      trip_id: currentTripId,
+      user_id: session.user.id,
+      type: 'ai',
+      content: aiResponse.message,
+      cards: response.cards,
+      follow_up: response.followUp,
+      trip_context: response.tripContext
+    });
 
     // Create response with rate limit headers
     const nextResponse = NextResponse.json(response);

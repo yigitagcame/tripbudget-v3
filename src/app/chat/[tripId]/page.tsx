@@ -10,6 +10,7 @@ import { sendChatMessage, type ChatMessage, type TripDetails, type Card } from '
 import { tripService, type TripData } from '@/lib/trip-service';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { MessageServiceClient } from '@/lib/message-service-client';
 
 interface TripPlanItem extends Card {
   id: number;
@@ -23,6 +24,7 @@ export default function ChatPage() {
   
   const [trip, setTrip] = useState<TripData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chatHistoryLoading, setChatHistoryLoading] = useState(true);
   const [currency, setCurrency] = useState('EUR'); // Default to Euro
   const [tripDetails, setTripDetails] = useState<TripDetails>({
     from: '',
@@ -33,24 +35,77 @@ export default function ChatPage() {
   });
 
   const [tripPlan, setTripPlan] = useState<TripPlanItem[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      type: 'ai',
-      content: "Hi! I'm your AI travel assistant. I can help you plan your perfect trip! Tell me where you'd like to go, when you're traveling, and how many people are coming along.",
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
 
-  // Load trip data on component mount
+  // Load trip data and chat history on component mount
   useEffect(() => {
     if (tripId && user) {
-      loadTrip();
+      loadTripAndHistory();
     }
   }, [tripId, user]);
+
+  const loadTripAndHistory = async () => {
+    setLoading(true);
+    setChatHistoryLoading(true);
+    
+    try {
+      // Load trip data first
+      const tripData = await tripService.getTrip(tripId);
+      if (tripData && tripData.user_id === user?.id) {
+        setTrip(tripData);
+        // Update trip details from database
+        const loadedTripDetails = {
+          from: tripData.origin || '',
+          to: tripData.destination || '',
+          departDate: tripData.departure_date || '',
+          returnDate: tripData.return_date || '',
+          passengers: tripData.passenger_count || 0
+        };
+        console.log('ChatPage - Loaded trip details from database:', loadedTripDetails);
+        setTripDetails(loadedTripDetails);
+      } else {
+        // Redirect if trip doesn't exist or user doesn't own it
+        router.push('/trips');
+        return;
+      }
+
+      // Load chat history
+      const dbMessages = await MessageServiceClient.getMessagesByTripId(tripId);
+      if (dbMessages && dbMessages.length > 0) {
+        // Convert DB messages to ChatMessage format
+        const chatMessages = dbMessages.map((msg, idx) => ({
+          id: idx + 1,
+          type: msg.type,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          cards: msg.cards && typeof msg.cards === 'string' && msg.cards.trim() !== '' ? JSON.parse(msg.cards) : undefined,
+          followUp: msg.follow_up,
+          tripContext: msg.trip_context && typeof msg.trip_context === 'string' && msg.trip_context.trim() !== '' ? JSON.parse(msg.trip_context) : undefined
+        }));
+        setMessages(chatMessages);
+        console.log('ChatPage - Loaded chat history:', chatMessages.length, 'messages');
+      } else {
+        // No messages yet, set initial welcome message
+        setMessages([{
+          id: 1,
+          type: 'ai',
+          content: "Hi! I'm your AI travel assistant. I can help you plan your perfect trip! Tell me where you'd like to go, when you're traveling, and how many people are coming along.",
+          timestamp: new Date()
+        }]);
+        console.log('ChatPage - No chat history found, set initial welcome message');
+      }
+    } catch (error) {
+      console.error('Error loading trip and chat history:', error);
+      router.push('/trips');
+      return;
+    } finally {
+      setLoading(false);
+      setChatHistoryLoading(false);
+    }
+  };
 
   // Set up realtime subscription for trip changes
   useEffect(() => {
@@ -92,34 +147,7 @@ export default function ChatPage() {
     }
   }, [tripId, user, router]);
 
-  const loadTrip = async () => {
-    try {
-      const tripData = await tripService.getTrip(tripId);
-      if (tripData && tripData.user_id === user?.id) {
-        setTrip(tripData);
-        // Update trip details from database
-        const loadedTripDetails = {
-          from: tripData.origin || '',
-          to: tripData.destination || '',
-          departDate: tripData.departure_date || '',
-          returnDate: tripData.return_date || '',
-          passengers: tripData.passenger_count || 0
-        };
-        console.log('ChatPage - Loaded trip details from database:', loadedTripDetails);
-        setTripDetails(loadedTripDetails);
-      } else {
-        // Redirect if trip doesn't exist or user doesn't own it
-        router.push('/trips');
-        return;
-      }
-    } catch (error) {
-      console.error('Error loading trip:', error);
-      router.push('/trips');
-      return;
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   // Clean up any invalid messages on component mount
   React.useEffect(() => {
@@ -230,13 +258,13 @@ export default function ChatPage() {
     setTripPlan(prev => [...prev, newItem]);
   };
 
-  if (loading) {
+  if (loading || chatHistoryLoading) {
     return (
       <ProtectedRoute>
         <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your trip...</p>
+            <p className="text-gray-600">Loading your trip and chat history...</p>
           </div>
         </div>
       </ProtectedRoute>
