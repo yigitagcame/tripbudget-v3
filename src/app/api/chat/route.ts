@@ -32,7 +32,7 @@ interface TripDetails {
 }
 
 interface Card {
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place';
+  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination';
   title: string;
   description: string;
   price?: string;
@@ -45,7 +45,7 @@ interface Card {
 interface AIResponse {
   message: string;
   suggestions?: Array<{
-    type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'place';
+    type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'place' | 'destination';
     title: string;
     description: string;
     price?: string;
@@ -88,7 +88,7 @@ RESPONSE FORMAT:
   "message": "Your conversational response to the user",
   "suggestions": [
     {
-      "type": "flight|hotel|restaurant|activity|place",
+      "type": "flight|hotel|restaurant|activity|place|destination",
       "title": "Name",
       "description": "Brief description",
       "price": "Price range",
@@ -117,7 +117,8 @@ TRIP CONTEXT:
 - Always use the existing trip context as the foundation for your recommendations
 
 SUGGESTIONS:
-- Include suggestions array when user asks about flights, hotels, restaurants, activities, or places
+- Include suggestions array when user asks about flights, hotels, restaurants, activities, places, or destinations
+- Use "destination" type for destination suggestions (cities, countries, regions)
 - Leave suggestions empty array [] if no specific recommendations needed
 
 FLIGHT SEARCH:

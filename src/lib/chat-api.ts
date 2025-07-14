@@ -18,7 +18,7 @@ export interface TripDetails {
 }
 
 export interface Card {
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place';
+  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination';
   title: string;
   description: string;
   price?: string;
