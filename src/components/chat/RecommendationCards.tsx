@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plane, Hotel, Utensils, MapPin, Star, ExternalLink, Plus, Globe } from 'lucide-react';
+import { Plane, Hotel, Utensils, MapPin, Star, ExternalLink, Plus, Globe, Package, Calendar } from 'lucide-react';
 import { Card } from '@/lib/chat-api';
 
 interface RecommendationCardsProps {
@@ -24,6 +24,10 @@ const getCardIcon = (type: Card['type']) => {
       return <Plane className="w-5 h-5" />;
     case 'destination':
       return <Globe className="w-5 h-5" />;
+    case 'package':
+      return <Package className="w-5 h-5" />;
+    case 'seasonal':
+      return <Calendar className="w-5 h-5" />;
     default:
       return <MapPin className="w-5 h-5" />;
   }
@@ -45,6 +49,10 @@ const getCardColor = (type: Card['type']) => {
       return 'from-red-500 to-red-600';
     case 'destination':
       return 'from-teal-500 to-teal-600';
+    case 'package':
+      return 'from-pink-500 to-pink-600';
+    case 'seasonal':
+      return 'from-amber-500 to-amber-600';
     default:
       return 'from-gray-500 to-gray-600';
   }
@@ -66,6 +74,10 @@ const getCardTypeLabel = (type: Card['type']) => {
       return 'Transport';
     case 'destination':
       return 'Destination';
+    case 'package':
+      return 'Package Deal';
+    case 'seasonal':
+      return 'Seasonal Analysis';
     default:
       return 'Recommendation';
   }
