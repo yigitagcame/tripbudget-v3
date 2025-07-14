@@ -32,6 +32,7 @@ export interface ChatRequest {
   message: string;
   conversationHistory: ChatMessage[];
   tripId?: string; // Add tripId to request
+  currency?: string; // Add currency to request
 }
 
 export interface ChatResponse {

@@ -23,6 +23,7 @@ export default function ChatPage() {
   
   const [trip, setTrip] = useState<TripData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('EUR'); // Default to Euro
   const [tripDetails, setTripDetails] = useState<TripDetails>({
     from: '',
     to: '',
@@ -127,7 +128,7 @@ export default function ChatPage() {
     ));
   }, []);
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, currency?: string) => {
     // Validate message
     if (!message || typeof message !== 'string' || message.trim() === '') {
       console.error('Invalid message:', message);
@@ -158,11 +159,12 @@ export default function ChatPage() {
 
       console.log('ChatPage - Sending conversation history:', conversationHistoryWithCurrentMessage);
 
-      // Send message to backend API with tripId
+      // Send message to backend API with tripId and currency
       const aiResponse = await sendChatMessage({
         message,
         conversationHistory: conversationHistoryWithCurrentMessage,
-        tripId: tripId
+        tripId: tripId,
+        currency: currency || 'EUR'
       });
       
       // Validate AI response before adding to messages
@@ -293,6 +295,8 @@ export default function ChatPage() {
                 isLoading={isLoading}
                 tripDetails={tripDetails}
                 onAddToTripPlan={handleAddToTripPlan}
+                currency={currency}
+                onCurrencyChange={setCurrency}
               />
             </motion.div>
 

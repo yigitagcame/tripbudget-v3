@@ -105,6 +105,8 @@ RESPONSE FORMAT:
   }
 }
 
+CURRENCY: Always display prices in the user's preferred currency (EUR for Euro, USD for US Dollar). When making recommendations, consider the currency context and mention prices in the appropriate format.
+
 TRIP CONTEXT:
 - CRITICAL: If trip context is provided in the system prompt, you MUST preserve it and only update fields when the user explicitly provides new information
 - Extract destination from user messages → update "to" field (only if not already set or user provides new destination)
@@ -236,11 +238,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { message, conversationHistory = [], tripId } = body;
+    const { message, conversationHistory = [], tripId, currency = 'EUR' } = body;
 
     console.log('API - Received message:', message);
     console.log('API - Received conversation history length:', conversationHistory.length);
     console.log('API - Received tripId:', tripId);
+    console.log('API - Received currency:', currency);
 
     // Validate conversation history is an array
     if (!Array.isArray(conversationHistory)) {
@@ -326,7 +329,7 @@ export async function POST(request: NextRequest) {
 
     // Always include current date in the system prompt
     const currentDate = getCurrentDateString();
-    const baseContext = `\n\nCURRENT DATE: ${currentDate}\n\nHelp the user establish their travel plans by asking about destinations, dates, and number of travelers. Always extract and maintain trip context from the conversation.`;
+    const baseContext = `\n\nCURRENT DATE: ${currentDate}\nCURRENCY: ${currency}\n\nHelp the user establish their travel plans by asking about destinations, dates, and number of travelers. Always extract and maintain trip context from the conversation. Display all prices in ${currency === 'EUR' ? 'Euro (€)' : 'US Dollar ($)'}.`;
     
     messages[0].content += baseContext;
 
@@ -367,6 +370,9 @@ export async function POST(request: NextRequest) {
             const args = JSON.parse(toolCall.function.arguments);
             console.log('API - Flight search args:', args);
             
+            // Add currency to flight search args
+            args.curr = currency;
+            
             // Validate flight search parameters
             const validationErrors = validateFlightSearchParams(args);
             if (validationErrors.length > 0) {
@@ -388,7 +394,7 @@ export async function POST(request: NextRequest) {
             
             // Transform flight results to cards
             if (flightResults.success) {
-              flightCards = transformFlightResultsToCards(flightResults);
+              flightCards = transformFlightResultsToCards(flightResults, currency);
             }
             
             // Add flight results to the conversation
@@ -413,6 +419,9 @@ export async function POST(request: NextRequest) {
           try {
             const args = JSON.parse(toolCall.function.arguments);
             console.log('API - Accommodation search args:', args);
+            
+            // Add currency to accommodation search args
+            args.currency_code = currency;
             
             // Validate accommodation search parameters
             const validationErrors = validateAccommodationSearchParams(args);
