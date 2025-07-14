@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plane, Hotel, Utensils, MapPin, Star, ExternalLink, Plus } from 'lucide-react';
+import { Plane, Hotel, Utensils, MapPin, Star, ExternalLink, Plus, Globe } from 'lucide-react';
 import { Card } from '@/lib/chat-api';
 
 interface RecommendationCardsProps {
@@ -22,6 +22,8 @@ const getCardIcon = (type: Card['type']) => {
       return <MapPin className="w-5 h-5" />;
     case 'transport':
       return <Plane className="w-5 h-5" />;
+    case 'destination':
+      return <Globe className="w-5 h-5" />;
     default:
       return <MapPin className="w-5 h-5" />;
   }
@@ -41,6 +43,8 @@ const getCardColor = (type: Card['type']) => {
       return 'from-indigo-500 to-indigo-600';
     case 'transport':
       return 'from-red-500 to-red-600';
+    case 'destination':
+      return 'from-teal-500 to-teal-600';
     default:
       return 'from-gray-500 to-gray-600';
   }
@@ -60,6 +64,8 @@ const getCardTypeLabel = (type: Card['type']) => {
       return 'Place';
     case 'transport':
       return 'Transport';
+    case 'destination':
+      return 'Destination';
     default:
       return 'Recommendation';
   }
@@ -122,7 +128,7 @@ export default function RecommendationCards({ cards, onAddToTripPlan }: Recommen
               </div>
               
               <div className="flex items-center space-x-2">
-                {onAddToTripPlan && (
+                {onAddToTripPlan && card.type !== 'destination' && (
                   <button
                     onClick={() => onAddToTripPlan(card)}
                     className="inline-flex items-center space-x-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors"

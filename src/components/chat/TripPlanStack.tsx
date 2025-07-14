@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Hotel, Utensils, MapPin, X, Star, Clock, DollarSign, Plus } from 'lucide-react';
+import { Plane, Hotel, Utensils, MapPin, X, Star, Clock, DollarSign, Plus, Globe } from 'lucide-react';
 import { Card } from '@/lib/chat-api';
 
 interface TripPlanItem extends Card {
@@ -25,6 +25,8 @@ export default function TripPlanStack({ tripPlan, onRemoveItem }: TripPlanStackP
         return <Utensils className="w-4 h-4" />;
       case 'activity':
         return <MapPin className="w-4 h-4" />;
+      case 'destination':
+        return <Globe className="w-4 h-4" />;
       default:
         return <MapPin className="w-4 h-4" />;
     }
@@ -40,6 +42,8 @@ export default function TripPlanStack({ tripPlan, onRemoveItem }: TripPlanStackP
         return 'bg-orange-100 text-orange-600 border-orange-200';
       case 'activity':
         return 'bg-green-100 text-green-600 border-green-200';
+      case 'destination':
+        return 'bg-teal-100 text-teal-600 border-teal-200';
       default:
         return 'bg-gray-100 text-gray-600 border-gray-200';
     }
@@ -55,6 +59,8 @@ export default function TripPlanStack({ tripPlan, onRemoveItem }: TripPlanStackP
         return 'Restaurant';
       case 'activity':
         return 'Activity';
+      case 'destination':
+        return 'Destination';
       default:
         return 'Item';
     }

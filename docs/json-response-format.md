@@ -34,7 +34,7 @@ The AI chat API now returns responses in a structured JSON format that includes 
 
 ```typescript
 interface Card {
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place';
+  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination';
   title: string;
   description: string;
   price?: string;
@@ -52,6 +52,7 @@ interface Card {
 - `activity`: Tourist activities and attractions
 - `transport`: Transportation options
 - `place`: General places of interest
+- `destination`: Destination suggestions (cities, countries, regions) - cannot be added to trip plan
 
 #### 3. Follow-up
 - **Type**: `string`
@@ -74,6 +75,7 @@ interface TripDetails {
 
 ## Example API Response
 
+### Flight Recommendations
 ```json
 {
   "id": 1703123456789,
@@ -111,6 +113,47 @@ interface TripDetails {
 }
 ```
 
+### Destination Suggestions
+```json
+{
+  "id": 1703123456790,
+  "type": "ai",
+  "content": "I'd be happy to suggest some amazing destinations for your next trip! Here are some beautiful places that might interest you.",
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "cards": [
+    {
+      "type": "destination",
+      "title": "Bali, Indonesia",
+      "description": "Tropical paradise with stunning beaches, rich culture, and affordable luxury",
+      "rating": 4.8,
+      "location": "Indonesia"
+    },
+    {
+      "type": "destination",
+      "title": "Santorini, Greece",
+      "description": "Iconic white-washed buildings, breathtaking sunsets, and Mediterranean charm",
+      "rating": 4.9,
+      "location": "Greece"
+    },
+    {
+      "type": "destination",
+      "title": "Kyoto, Japan",
+      "description": "Ancient temples, traditional gardens, and authentic Japanese culture",
+      "rating": 4.7,
+      "location": "Japan"
+    }
+  ],
+  "followUp": "Which of these destinations appeals to you most? I can help you plan the details once you choose!",
+  "tripContext": {
+    "from": "",
+    "to": "",
+    "departDate": "",
+    "returnDate": "",
+    "passengers": 0
+  }
+}
+```
+
 ## Frontend Integration
 
 ### Chat Messages
@@ -121,9 +164,10 @@ The frontend displays:
 4. **Trip context** is used to update the sidebar
 
 ### Trip Plan Integration
-- Users can click "Add to Trip" on recommendation cards
+- Users can click "Add to Trip" on recommendation cards (except destination cards)
 - Cards are added to the trip plan sidebar
 - Trip plan maintains the same card structure
+- Destination cards are for suggestions only and cannot be added to trip plan
 
 ### Trip Details Synchronization
 - The `tripContext` from each response updates the trip details sidebar
