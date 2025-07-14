@@ -1,6 +1,6 @@
 import { TequilaFlight } from './tequila-api';
 
-export function transformFlightToCard(flight: TequilaFlight) {
+export function transformFlightToCard(flight: TequilaFlight, currency: string = 'USD') {
   const durationHours = Math.floor(flight.duration.total / 3600);
   const durationMinutes = Math.floor((flight.duration.total % 3600) / 60);
   
@@ -31,7 +31,8 @@ export function transformFlightToCard(flight: TequilaFlight) {
   const description = `${flight.airlines.join(', ')} • ${durationHours}h ${durationMinutes}m • ${formatTime(flight.local_departure)} - ${formatTime(flight.local_arrival)}`;
   
   // Format price with proper currency
-  const price = `$${flight.price.toFixed(2)}`;
+  const currencySymbol = currency === 'EUR' ? '€' : '$';
+  const price = `${currencySymbol}${flight.price.toFixed(2)}`;
   
   // Create location string
   const location = `${flight.cityFrom} to ${flight.cityTo}`;
@@ -58,7 +59,7 @@ export function transformFlightToCard(flight: TequilaFlight) {
   };
 }
 
-export function transformFlightResultsToCards(flightResults: any) {
+export function transformFlightResultsToCards(flightResults: any, currency: string = 'USD') {
   if (!flightResults.success || !flightResults.data) {
     return [];
   }
@@ -67,14 +68,14 @@ export function transformFlightResultsToCards(flightResults: any) {
   const limitedFlights = flightResults.data.slice(0, 2);
   
   return limitedFlights.map((flight: TequilaFlight) => 
-    transformFlightToCard(flight)
+    transformFlightToCard(flight, currency)
   );
 }
 
 /**
  * Transform flight results for different display formats
  */
-export function transformFlightResultsForSummary(flightResults: any) {
+export function transformFlightResultsForSummary(flightResults: any, currency: string = 'USD') {
   if (!flightResults.success || !flightResults.data || flightResults.data.length === 0) {
     return {
       count: 0,
@@ -93,10 +94,13 @@ export function transformFlightResultsForSummary(flightResults: any) {
   const allAirlines = flights.flatMap((f: TequilaFlight) => f.airlines);
   const uniqueAirlines = [...new Set(allAirlines)];
   
+  // Format price with proper currency
+  const currencySymbol = currency === 'EUR' ? '€' : '$';
+  
   return {
     count: flights.length,
-    priceRange: minPrice === maxPrice ? `$${minPrice.toFixed(2)}` : `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`,
+    priceRange: minPrice === maxPrice ? `${currencySymbol}${minPrice.toFixed(2)}` : `${currencySymbol}${minPrice.toFixed(2)} - ${currencySymbol}${maxPrice.toFixed(2)}`,
     airlines: uniqueAirlines,
-    message: `Found ${flights.length} flights from ${minPrice === maxPrice ? `$${minPrice.toFixed(2)}` : `$${minPrice.toFixed(2)} to $${maxPrice.toFixed(2)}`}`
+    message: `Found ${flights.length} flights from ${minPrice === maxPrice ? `${currencySymbol}${minPrice.toFixed(2)}` : `${currencySymbol}${minPrice.toFixed(2)} to ${currencySymbol}${maxPrice.toFixed(2)}`}`
   };
 } 
