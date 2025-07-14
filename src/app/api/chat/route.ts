@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { flightSearchFunction, executeFlightSearch, accommodationSearchFunction, executeAccommodationSearch } from '@/lib/openai-functions';
+import { 
+  flightSearchFunction, 
+  executeFlightSearch, 
+  accommodationSearchFunction, 
+  executeAccommodationSearch,
+  cheapestDestinationFunction,
+  executeCheapestDestinationSearch,
+  packageDealFunction,
+  executePackageDealSearch,
+  seasonalPriceFunction,
+  executeSeasonalPriceAnalysis
+} from '@/lib/openai-functions';
 import { transformFlightResultsToCards } from '@/lib/flight-transformer';
 import { transformAccommodationResultsToCards } from '@/lib/accommodation-transformer';
+import { 
+  transformCheapestDestinationResults, 
+  transformPackageDealResults, 
+  transformSeasonalAnalysisResults 
+} from '@/lib/creative-results-transformer';
 import { validateFlightSearchParams, handleFlightSearchError, validateAccommodationSearchParams, handleAccommodationSearchError } from '@/lib/validation';
 import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
 // NOTE: We use the server-side trip service here because the API route needs to bypass RLS for trip verification and updates.
@@ -32,7 +48,7 @@ interface TripDetails {
 }
 
 interface Card {
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination';
+  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination' | 'package' | 'seasonal';
   title: string;
   description: string;
   price?: string;
@@ -45,7 +61,7 @@ interface Card {
 interface AIResponse {
   message: string;
   suggestions?: Array<{
-    type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'place' | 'destination';
+    type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'place' | 'destination' | 'package' | 'seasonal';
     title: string;
     description: string;
     price?: string;
@@ -138,6 +154,47 @@ ACCOMMODATION SEARCH:
   * "luxury" - when user asks for luxury, premium, high-end, 5-star options
   * "best" - when user asks for best, recommended, or doesn't specify (default)
 - Limit results to 3 hotels per search to provide good options
+
+CREATIVE SEARCH CAPABILITIES:
+
+1. CHEAPEST DESTINATION SEARCH:
+- Use find_cheapest_destination function when users ask:
+  * "What's the cheapest place to go?"
+  * "Where can I travel on a budget?"
+  * "Show me the cheapest destinations"
+  * "What's the most affordable place to visit?"
+- This function compares multiple destinations for total cost (flight + accommodation)
+- Always provide the origin location (fly_from) and travel dates
+- The function will return top 3 cheapest destinations with cost breakdown
+
+2. PACKAGE DEAL OPTIMIZATION:
+- Use find_package_deal function when users ask:
+  * "Find me a complete package to [destination]"
+  * "Show me flight and hotel packages"
+  * "What's the best deal for [destination]?"
+  * "I want a complete trip package"
+- This function finds the best flight + accommodation combinations
+- Consider user's budget and preferences (price vs. quality vs. location)
+- Return top 3 package options with total cost
+
+3. SEASONAL PRICE ANALYSIS:
+- Use analyze_seasonal_prices function when users ask:
+  * "When is the best time to visit [destination]?"
+  * "What's the cheapest time to go to [destination]?"
+  * "When should I book for [destination]?"
+  * "Show me price trends for [destination]"
+- This function analyzes prices across different months
+- Provide origin, destination, and date range to analyze
+- Return monthly price trends and recommendations
+
+INTENT DETECTION:
+- "cheapest place to go" → find_cheapest_destination
+- "best time to visit" → analyze_seasonal_prices  
+- "complete package" → find_package_deal
+- "budget travel" → combine cheapest flights + budget accommodation
+- "luxury trip" → combine premium flights + luxury accommodation
+- "quick getaway" → focus on shorter duration options
+- "family vacation" → consider child-friendly destinations and accommodation
 
 Be helpful, conversational, and always consider the current trip context when making recommendations.`;
 
@@ -344,7 +401,13 @@ export async function POST(request: NextRequest) {
       messages,
       temperature: 0.7,
       max_tokens: 1500,
-      tools: [flightSearchFunction, accommodationSearchFunction],
+      tools: [
+        flightSearchFunction, 
+        accommodationSearchFunction,
+        cheapestDestinationFunction,
+        packageDealFunction,
+        seasonalPriceFunction
+      ],
       tool_choice: "auto",
       response_format: { type: "json_object" }
     });
@@ -352,6 +415,7 @@ export async function POST(request: NextRequest) {
     let aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
     let flightCards: any[] = [];
     let accommodationCards: any[] = [];
+    let creativeCards: any[] = [];
 
     // Handle tool calls
     const responseMessage = completion.choices[0]?.message;
@@ -466,6 +530,99 @@ export async function POST(request: NextRequest) {
               tool_call_id: toolCall.id
             });
           }
+        } else if (toolCall.function.name === 'find_cheapest_destination') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Cheapest destination search args:', args);
+            
+            const results = await executeCheapestDestinationSearch(args);
+            console.log('API - Cheapest destination search results:', results.success ? 'Success' : 'Failed');
+            
+            // Transform results to cards
+            if (results.success && results.data) {
+              const destinationCards = transformCheapestDestinationResults(results.data, currency);
+              creativeCards = [...creativeCards, ...destinationCards];
+            }
+            
+            // Add results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(results),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing cheapest destination search:', error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: 'Failed to search for cheapest destinations'
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'find_package_deal') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Package deal search args:', args);
+            
+            const results = await executePackageDealSearch(args);
+            console.log('API - Package deal search results:', results.success ? 'Success' : 'Failed');
+            
+            // Transform results to cards
+            if (results.success && results.data) {
+              const packageCards = transformPackageDealResults(results.data, results.destination, currency);
+              creativeCards = [...creativeCards, ...packageCards];
+            }
+            
+            // Add results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(results),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing package deal search:', error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: 'Failed to search for package deals'
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'analyze_seasonal_prices') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Seasonal price analysis args:', args);
+            
+            const results = await executeSeasonalPriceAnalysis(args);
+            console.log('API - Seasonal price analysis results:', results.success ? 'Success' : 'Failed');
+            
+            // Transform results to cards
+            if (results.success && results.data) {
+              const seasonalCards = transformSeasonalAnalysisResults(results.data, args.fly_to, currency);
+              creativeCards = [...creativeCards, ...seasonalCards];
+            }
+            
+            // Add results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(results),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing seasonal price analysis:', error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: 'Failed to analyze seasonal prices'
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
         }
       }
       
@@ -570,7 +727,10 @@ export async function POST(request: NextRequest) {
       id: Date.now(),
       type: 'ai' as const,
       content: aiResponse.message,
-      cards: flightCards.length > 0 ? flightCards : accommodationCards.length > 0 ? accommodationCards : (aiResponse.suggestions || []),
+      cards: flightCards.length > 0 ? flightCards : 
+             accommodationCards.length > 0 ? accommodationCards : 
+             creativeCards.length > 0 ? creativeCards : 
+             (aiResponse.suggestions || []),
       followUp: aiResponse["follow-up message"],
       tripContext: {
         from: trip.origin || '',

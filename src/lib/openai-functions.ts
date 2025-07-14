@@ -209,6 +209,11 @@ export const accommodationSearchFunction = {
 };
 
 export async function executeFlightSearch(args: any) {
+  if (args.date_from) args.date_from = ensureFutureDate(args.date_from, 'dd/mm/yyyy');
+  if (args.date_to) args.date_to = ensureFutureDate(args.date_to, 'dd/mm/yyyy');
+  if (args.return_from) args.return_from = ensureFutureDate(args.return_from, 'dd/mm/yyyy');
+  if (args.return_to) args.return_to = ensureFutureDate(args.return_to, 'dd/mm/yyyy');
+  
   // Convert city names to airport codes for fly_from and fly_to
   if (args.fly_from) args.fly_from = convertCityToAirportCode(args.fly_from);
   if (args.fly_to) args.fly_to = convertCityToAirportCode(args.fly_to);
@@ -243,6 +248,504 @@ export async function executeFlightSearch(args: any) {
       currency: result.currency,
       search_id: result.search_id,
       search_type: args.search_type
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+// Utility to ensure date is not in the past (returns string in same format)
+function ensureFutureDate(dateStr: string, format: 'dd/mm/yyyy' | 'yyyy-mm-dd'): string {
+  if (!dateStr) return dateStr;
+  let date: Date;
+  if (format === 'dd/mm/yyyy') {
+    const [day, month, year] = dateStr.split('/').map(Number);
+    date = new Date(year, month - 1, day);
+  } else {
+    // yyyy-mm-dd
+    const [year, month, day] = dateStr.split('-').map(Number);
+    date = new Date(year, month - 1, day);
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) {
+    // Set to today
+    date = today;
+  }
+  if (format === 'dd/mm/yyyy') {
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+  } else {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+}
+
+// Creative API Function Definitions
+
+export const cheapestDestinationFunction = {
+  type: 'function' as const,
+  function: {
+    name: 'find_cheapest_destination',
+    description: 'Find the cheapest destination by comparing total costs (flight + accommodation) across multiple locations',
+    parameters: {
+      type: 'object',
+      properties: {
+        fly_from: {
+          type: 'string',
+          description: 'Departure location (IATA airport code, city code, or country code)'
+        },
+        date_from: {
+          type: 'string',
+          description: 'Departure date range start in dd/mm/yyyy format'
+        },
+        date_to: {
+          type: 'string',
+          description: 'Departure date range end in dd/mm/yyyy format'
+        },
+        return_from: {
+          type: 'string',
+          description: 'Return flight departure date in dd/mm/yyyy format'
+        },
+        return_to: {
+          type: 'string',
+          description: 'Return flight departure date end in dd/mm/yyyy format'
+        },
+        adults: {
+          type: 'number',
+          description: 'Number of adult passengers (default: 1)',
+          minimum: 1,
+          maximum: 9,
+          default: 1
+        },
+        duration: {
+          type: 'number',
+          description: 'Trip duration in days (default: 7)',
+          minimum: 1,
+          maximum: 30,
+          default: 7
+        },
+        budget: {
+          type: 'number',
+          description: 'Maximum total budget (optional)',
+          minimum: 100
+        },
+        destinations: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of potential destinations to compare (optional, will use defaults if not provided)',
+          default: ['Paris', 'Barcelona', 'Rome', 'Amsterdam', 'Prague', 'Budapest']
+        }
+      },
+      required: ['fly_from', 'date_from', 'date_to']
+    }
+  }
+};
+
+export const packageDealFunction = {
+  type: 'function' as const,
+  function: {
+    name: 'find_package_deal',
+    description: 'Find the best combination of flight and accommodation for a given destination and budget',
+    parameters: {
+      type: 'object',
+      properties: {
+        fly_from: {
+          type: 'string',
+          description: 'Departure location (IATA airport code, city code, or country code)'
+        },
+        destination: {
+          type: 'string',
+          description: 'Destination name (city, district, landmark, etc.)'
+        },
+        arrival_date: {
+          type: 'string',
+          description: 'Check-in date in YYYY-MM-DD format'
+        },
+        departure_date: {
+          type: 'string',
+          description: 'Check-out date in YYYY-MM-DD format'
+        },
+        adults: {
+          type: 'number',
+          description: 'Number of adult guests (default: 1)',
+          minimum: 1,
+          maximum: 30,
+          default: 1
+        },
+        budget: {
+          type: 'number',
+          description: 'Total budget for flight + accommodation (optional)',
+          minimum: 100
+        },
+        flight_priority: {
+          type: 'string',
+          description: 'Priority for flight selection',
+          enum: ['price', 'duration', 'quality'],
+          default: 'price'
+        },
+        accommodation_priority: {
+          type: 'string',
+          description: 'Priority for accommodation selection',
+          enum: ['price', 'quality', 'location'],
+          default: 'price'
+        }
+      },
+      required: ['fly_from', 'destination', 'arrival_date', 'departure_date']
+    }
+  }
+};
+
+export const seasonalPriceFunction = {
+  type: 'function' as const,
+  function: {
+    name: 'analyze_seasonal_prices',
+    description: 'Analyze flight and accommodation prices across different dates to find the best time to travel',
+    parameters: {
+      type: 'object',
+      properties: {
+        fly_from: {
+          type: 'string',
+          description: 'Departure location (IATA airport code, city code, or country code)'
+        },
+        fly_to: {
+          type: 'string',
+          description: 'Destination location (IATA airport code, city code, or country code)'
+        },
+        start_month: {
+          type: 'string',
+          description: 'Start month to analyze in YYYY-MM format (e.g., "2024-06")'
+        },
+        end_month: {
+          type: 'string',
+          description: 'End month to analyze in YYYY-MM format (e.g., "2024-12")'
+        },
+        trip_duration: {
+          type: 'number',
+          description: 'Trip duration in days (default: 7)',
+          minimum: 1,
+          maximum: 30,
+          default: 7
+        },
+        adults: {
+          type: 'number',
+          description: 'Number of adult passengers (default: 1)',
+          minimum: 1,
+          maximum: 9,
+          default: 1
+        }
+      },
+      required: ['fly_from', 'fly_to', 'start_month', 'end_month']
+    }
+  }
+};
+
+// Creative API Execution Functions
+
+export async function executeCheapestDestinationSearch(args: any) {
+  if (args.date_from) args.date_from = ensureFutureDate(args.date_from, 'dd/mm/yyyy');
+  if (args.date_to) args.date_to = ensureFutureDate(args.date_to, 'dd/mm/yyyy');
+  if (args.return_from) args.return_from = ensureFutureDate(args.return_from, 'dd/mm/yyyy');
+  if (args.return_to) args.return_to = ensureFutureDate(args.return_to, 'dd/mm/yyyy');
+  try {
+    const results = [];
+    const destinations = args.destinations || ['Paris', 'Barcelona', 'Rome', 'Amsterdam', 'Prague', 'Budapest'];
+    
+    console.log(`Searching for cheapest destination from ${args.fly_from} to ${destinations.length} destinations`);
+    
+    // Search each destination
+    for (const destination of destinations) {
+      try {
+        // Step 1: Search for flights
+        const flightResults = await searchFlights({
+          fly_from: args.fly_from,
+          fly_to: destination,
+          date_from: args.date_from,
+          date_to: args.date_to,
+          return_from: args.return_from,
+          return_to: args.return_to,
+          adults: args.adults || 1,
+          sort: 'price',
+          limit: 1,
+          curr: 'USD'
+        });
+        
+        if (!flightResults.data || flightResults.data.length === 0) {
+          console.log(`No flights found for ${destination}`);
+          continue;
+        }
+        
+        // Step 2: Search for accommodation
+        const accommodationResults = await executeAccommodationSearch({
+          destination: destination,
+          arrival_date: args.date_from.split('/').reverse().join('-'), // Convert dd/mm/yyyy to yyyy-mm-dd
+          departure_date: args.return_from ? args.return_from.split('/').reverse().join('-') : 
+                         new Date(new Date(args.date_from.split('/').reverse().join('-')).getTime() + (args.duration || 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          adults: args.adults || 1,
+          search_type: 'budget'
+        });
+        
+        if (accommodationResults.success && accommodationResults.data && accommodationResults.data.length > 0) {
+          const flightCost = flightResults.data[0].price;
+          const accommodationCost = accommodationResults.data[0].property.priceBreakdown.grossPrice.value * (args.duration || 7);
+          const totalCost = flightCost + accommodationCost;
+          
+          // Check budget constraint if provided
+          if (args.budget && totalCost > args.budget) {
+            continue;
+          }
+          
+          results.push({
+            destination,
+            flight: {
+              price: flightCost,
+              airline: flightResults.data[0].airlines.join(', '),
+              duration: flightResults.data[0].duration.total,
+              departure: flightResults.data[0].local_departure,
+              arrival: flightResults.data[0].local_arrival
+            },
+            accommodation: {
+              name: accommodationResults.data[0].property.name,
+              price: accommodationResults.data[0].property.priceBreakdown.grossPrice.value,
+              rating: accommodationResults.data[0].property.reviewScore,
+              total_cost: accommodationCost
+            },
+            totalCost,
+            dailyCost: totalCost / (args.duration || 7)
+          });
+        }
+      } catch (error) {
+        console.error(`Error searching for ${destination}:`, error);
+        continue;
+      }
+    }
+    
+    // Sort by total cost and return top 3
+    results.sort((a, b) => a.totalCost - b.totalCost);
+    const topResults = results.slice(0, 3);
+    
+    return {
+      success: true,
+      data: topResults,
+      search_type: 'cheapest_destination',
+      total_searched: destinations.length,
+      found_results: results.length
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+export async function executePackageDealSearch(args: any) {
+  if (args.arrival_date) args.arrival_date = ensureFutureDate(args.arrival_date, 'yyyy-mm-dd');
+  if (args.departure_date) args.departure_date = ensureFutureDate(args.departure_date, 'yyyy-mm-dd');
+  try {
+    // Step 1: Search for flights
+    const flightResults = await searchFlights({
+      fly_from: args.fly_from,
+      fly_to: args.destination,
+      date_from: args.arrival_date.split('-').reverse().join('/'), // Convert yyyy-mm-dd to dd/mm/yyyy
+      date_to: args.arrival_date.split('-').reverse().join('/'),
+      return_from: args.departure_date.split('-').reverse().join('/'),
+      return_to: args.departure_date.split('-').reverse().join('/'),
+      adults: args.adults || 1,
+      sort: args.flight_priority || 'price',
+      limit: 3,
+      curr: 'USD'
+    });
+    
+    if (!flightResults.data || flightResults.data.length === 0) {
+      return {
+        success: false,
+        error: `No flights found to ${args.destination}`
+      };
+    }
+    
+    // Step 2: Search for accommodation
+    const accommodationResults = await executeAccommodationSearch({
+      destination: args.destination,
+      arrival_date: args.arrival_date,
+      departure_date: args.departure_date,
+      adults: args.adults || 1,
+      search_type: args.accommodation_priority === 'quality' ? 'luxury' : 
+                   args.accommodation_priority === 'location' ? 'best' : 'budget'
+    });
+    
+    if (!accommodationResults.success || !accommodationResults.data || accommodationResults.data.length === 0) {
+      return {
+        success: false,
+        error: `No accommodation found in ${args.destination}`
+      };
+    }
+    
+    // Step 3: Combine and rank packages
+    const packages = [];
+    const tripDuration = Math.ceil((new Date(args.departure_date).getTime() - new Date(args.arrival_date).getTime()) / (1000 * 60 * 60 * 24));
+    
+    for (const flight of flightResults.data.slice(0, 2)) { // Top 2 flights
+      for (const accommodation of accommodationResults.data.slice(0, 2)) { // Top 2 accommodations
+        const flightCost = flight.price;
+        const accommodationCost = accommodation.property.priceBreakdown.grossPrice.value * tripDuration;
+        const totalCost = flightCost + accommodationCost;
+        
+        // Check budget constraint if provided
+        if (args.budget && totalCost > args.budget) {
+          continue;
+        }
+        
+        packages.push({
+          flight: {
+            price: flightCost,
+            airline: flight.airlines.join(', '),
+            duration: flight.duration.total,
+            departure: flight.local_departure,
+            arrival: flight.local_arrival
+          },
+          accommodation: {
+            name: accommodation.property.name,
+            price: accommodation.property.priceBreakdown.grossPrice.value,
+            rating: accommodation.property.reviewScore,
+            total_cost: accommodationCost
+          },
+          totalCost,
+          dailyCost: totalCost / tripDuration
+        });
+      }
+    }
+    
+    // Sort by total cost
+    packages.sort((a, b) => a.totalCost - b.totalCost);
+    
+    return {
+      success: true,
+      data: packages.slice(0, 3), // Return top 3 packages
+      search_type: 'package_deal',
+      destination: args.destination
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+export async function executeSeasonalPriceAnalysis(args: any) {
+  try {
+    const results = [];
+    const startDate = new Date(args.start_month + '-01');
+    const endDate = new Date(args.end_month + '-01');
+    
+    // Generate sample dates for each month
+    const sampleDates = [];
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      // Add 2 sample dates per month (beginning and middle)
+      const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const monthMiddle = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+      
+      sampleDates.push(monthStart);
+      sampleDates.push(monthMiddle);
+      
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    console.log(`Analyzing prices for ${sampleDates.length} sample dates`);
+    
+    // Analyze each sample date
+    for (const sampleDate of sampleDates) {
+      try {
+        const dateStr = sampleDate.toISOString().split('T')[0];
+        const returnDate = new Date(sampleDate.getTime() + (args.trip_duration || 7) * 24 * 60 * 60 * 1000);
+        const returnDateStr = returnDate.toISOString().split('T')[0];
+        
+        // Search for flights
+        const flightResults = await searchFlights({
+          fly_from: args.fly_from,
+          fly_to: args.fly_to,
+          date_from: dateStr.split('-').reverse().join('/'),
+          date_to: dateStr.split('-').reverse().join('/'),
+          return_from: returnDateStr.split('-').reverse().join('/'),
+          return_to: returnDateStr.split('-').reverse().join('/'),
+          adults: args.adults || 1,
+          sort: 'price',
+          limit: 1,
+          curr: 'USD'
+        });
+        
+        if (flightResults.data && flightResults.data.length > 0) {
+          // Search for accommodation
+          const accommodationResults = await executeAccommodationSearch({
+            destination: args.fly_to,
+            arrival_date: dateStr,
+            departure_date: returnDateStr,
+            adults: args.adults || 1,
+            search_type: 'budget'
+          });
+          
+          if (accommodationResults.success && accommodationResults.data && accommodationResults.data.length > 0) {
+            const flightCost = flightResults.data[0].price;
+            const accommodationCost = accommodationResults.data[0].property.priceBreakdown.grossPrice.value * (args.trip_duration || 7);
+            const totalCost = flightCost + accommodationCost;
+            
+            results.push({
+              date: dateStr,
+              month: new Date(dateStr).toLocaleString('default', { month: 'long', year: 'numeric' }),
+              flightCost,
+              accommodationCost,
+              totalCost,
+              dailyCost: totalCost / (args.trip_duration || 7)
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`Error analyzing date ${sampleDate.toISOString().split('T')[0]}:`, error);
+        continue;
+      }
+    }
+    
+    // Group by month and find averages
+    const monthlyAverages: any = {};
+    results.forEach(result => {
+      if (!monthlyAverages[result.month]) {
+        monthlyAverages[result.month] = [];
+      }
+      monthlyAverages[result.month].push(result);
+    });
+    
+    const monthlySummary = Object.entries(monthlyAverages).map(([month, data]: [string, any]) => {
+      const avgTotalCost = data.reduce((sum: number, item: any) => sum + item.totalCost, 0) / data.length;
+      const minTotalCost = Math.min(...data.map((item: any) => item.totalCost));
+      const maxTotalCost = Math.max(...data.map((item: any) => item.totalCost));
+      
+      return {
+        month,
+        averageCost: Math.round(avgTotalCost),
+        minCost: Math.round(minTotalCost),
+        maxCost: Math.round(maxTotalCost),
+        sampleCount: data.length
+      };
+    });
+    
+    // Find best and worst months
+    monthlySummary.sort((a, b) => a.averageCost - b.averageCost);
+    const bestMonth = monthlySummary[0];
+    const worstMonth = monthlySummary[monthlySummary.length - 1];
+    
+    return {
+      success: true,
+      data: {
+        monthlySummary,
+        bestMonth,
+        worstMonth,
+        allResults: results
+      },
+      search_type: 'seasonal_analysis'
     };
   } catch (error) {
     return {
