@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import TripDetailsSidebar from '@/components/chat/TripDetailsSidebar';
 import TripPlanStack from '@/components/chat/TripPlanStack';
@@ -20,8 +20,10 @@ interface TripPlanItem extends Card {
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const tripId = params.tripId as string;
   const { user } = useAuth();
+  const initialMessage = searchParams.get('message');
   
   const [trip, setTrip] = useState<TripData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,9 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
   const [showGetMoreMessagesModal, setShowGetMoreMessagesModal] = useState(false);
+  
+  // Use ref to track if initial message has been processed to prevent race conditions
+  const initialMessageProcessedRef = useRef(false);
 
   // Load trip data and chat history on component mount
   useEffect(() => {
@@ -149,8 +154,6 @@ export default function ChatPage() {
     }
   }, [tripId, user, router]);
 
-
-
   // Clean up any invalid messages on component mount
   React.useEffect(() => {
     setMessages(prev => prev.filter(msg => 
@@ -158,86 +161,62 @@ export default function ChatPage() {
     ));
   }, []);
 
-  const handleSendMessage = async (message: string, currency?: string) => {
-    // Validate message
+  const handleSendMessage = useCallback(async (message: string, currency?: string) => {
     if (!message || typeof message !== 'string' || message.trim() === '') {
       console.error('Invalid message:', message);
       return;
     }
 
-    // Add user message
     const userMessage: ChatMessage = {
       id: Date.now(),
       type: 'user',
       content: message.trim(),
       timestamp: new Date()
     };
-    
-    setMessages(prev => [...prev, userMessage]);
 
-    // Set loading state
+    // Add user message immediately and get the updated messages for API call
+    let updatedMessages: ChatMessage[] = [];
+    setMessages(prevMessages => {
+      // Remove any empty/invalid messages
+      const cleanPrev = prevMessages.filter(msg => msg && msg.content && typeof msg.content === 'string' && msg.content.trim() !== '');
+      updatedMessages = [...cleanPrev, userMessage];
+      console.log('ChatPage - Adding user message to state:', userMessage);
+      console.log('ChatPage - Updated messages after adding user message:', updatedMessages);
+      return updatedMessages;
+    });
+
     setIsLoading(true);
 
     try {
-      // Clean conversation history to remove any messages with null/undefined content
-      const cleanConversationHistory = messages.filter(msg => 
-        msg && msg.content && typeof msg.content === 'string' && msg.content.trim() !== ''
-      );
-
-      // Add the current user message to the conversation history for the API
-      const conversationHistoryWithCurrentMessage = [...cleanConversationHistory, userMessage];
-
-      console.log('ChatPage - Sending conversation history:', conversationHistoryWithCurrentMessage);
-
       // Send message to backend API with tripId and currency
       const aiResponse = await sendChatMessage({
         message,
-        conversationHistory: conversationHistoryWithCurrentMessage,
+        conversationHistory: updatedMessages,
         tripId: tripId,
         currency: currency || 'EUR'
       });
-      
-      // Validate AI response before adding to messages
+
       if (aiResponse && aiResponse.content && typeof aiResponse.content === 'string') {
-        // Update trip details from AI response (only if there are actual changes)
         if (aiResponse.tripContext) {
-          console.log('ChatPage - Received trip context from AI response:', aiResponse.tripContext);
-          console.log('ChatPage - Current trip details:', tripDetails);
-          
-          // Only update if there are actual changes to avoid unnecessary re-renders
-          const hasChanges = 
+          const hasChanges =
             aiResponse.tripContext.from !== tripDetails.from ||
             aiResponse.tripContext.to !== tripDetails.to ||
             aiResponse.tripContext.departDate !== tripDetails.departDate ||
             aiResponse.tripContext.returnDate !== tripDetails.returnDate ||
             aiResponse.tripContext.passengers !== tripDetails.passengers;
-          
           if (hasChanges) {
-            console.log('ChatPage - Updating trip details with changes:', aiResponse.tripContext);
             setTripDetails(aiResponse.tripContext);
-          } else {
-            console.log('ChatPage - No changes detected in trip context');
           }
-        } else {
-          console.log('ChatPage - No tripContext in AI response');
         }
-        
         setMessages(prev => [...prev, aiResponse]);
       } else {
-        console.error('Invalid AI response:', aiResponse);
         throw new Error('Invalid response from AI');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Handle specific error types
       let errorMessage: ChatMessage;
-      
       const referralBonus = parseInt(process.env.NEXT_PUBLIC_MESSAGE_COUNTER_REFERRAL_BONUS || '25');
-
       if (error && typeof error === 'object' && 'type' in error) {
         const chatError = error as ChatError;
-        
         switch (chatError.type) {
           case 'insufficient_messages':
             errorMessage = {
@@ -275,25 +254,41 @@ export default function ChatPage() {
             errorMessage = {
               id: Date.now() + 1,
               type: 'ai',
-              content: "I'm sorry, I encountered an error while processing your message. Please try again.",
+              content: "I'm sorry, something went wrong. Please try again.",
               timestamp: new Date()
             };
         }
       } else {
-        // Generic error message
         errorMessage = {
           id: Date.now() + 1,
           type: 'ai',
-          content: "I'm sorry, I encountered an error while processing your message. Please try again.",
+          content: "I'm sorry, something went wrong. Please try again.",
           timestamp: new Date()
         };
       }
-      
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tripId]); // Removed tripDetails from dependencies to prevent recreation
+
+  // Handle initial message from URL parameter
+  useEffect(() => {
+    if (initialMessage && !initialMessageProcessedRef.current && !loading && !chatHistoryLoading) {
+      console.log('ChatPage - Sending initial message from URL:', initialMessage);
+      
+      // Mark as processed immediately to prevent race conditions
+      initialMessageProcessedRef.current = true;
+      
+      // Send the message immediately
+      handleSendMessage(initialMessage);
+      
+      // Clean up the URL parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('message');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [initialMessage, loading, chatHistoryLoading, handleSendMessage]);
 
   const handleRemoveFromTripPlan = (id: number) => {
     setTripPlan(prev => prev.filter(item => item.id !== id));

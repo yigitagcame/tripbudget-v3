@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { tripService } from '@/lib/trip-service';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function ChatPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const initialMessage = searchParams.get('message');
 
   useEffect(() => {
     const findOrCreateTrip = async () => {
@@ -19,8 +21,11 @@ export default function ChatPage() {
         const tripId = await tripService.findOrCreateEmptyTrip(user.id);
         
         if (tripId) {
-          // Redirect to the trip's chat page
-          router.push(`/chat/${tripId}`);
+          // Redirect to the trip's chat page with the initial message if provided
+          const url = initialMessage 
+            ? `/chat/${tripId}?message=${encodeURIComponent(initialMessage)}`
+            : `/chat/${tripId}`;
+          router.push(url);
         } else {
           console.error('Failed to find or create trip');
           // Handle error - could show an error message
@@ -32,7 +37,7 @@ export default function ChatPage() {
     };
 
     findOrCreateTrip();
-  }, [user, router]);
+  }, [user, router, initialMessage]);
 
   return (
     <ProtectedRoute>
