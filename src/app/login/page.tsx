@@ -26,6 +26,8 @@ function LoginPageContent() {
   const { signInWithProvider, user, loading } = useAuth();
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [showAgreementWarning, setShowAgreementWarning] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -56,6 +58,19 @@ function LoginPageContent() {
       }
     }
   }, [searchParams]);
+
+  const handleSocialLogin = async (provider: 'google' | 'twitter') => {
+    if (!agreementChecked) {
+      setShowAgreementWarning(true);
+      return;
+    }
+
+    setLoadingProvider(provider);
+    setError(null);
+    setShowAgreementWarning(false);
+    await signInWithProvider(provider);
+    // The user will be redirected by Supabase
+  };
 
   // Show loading while checking authentication
   if (loading) {
@@ -94,13 +109,6 @@ function LoginPageContent() {
       </div>
     );
   }
-
-  const handleSocialLogin = async (provider: 'google' | 'twitter') => {
-    setLoadingProvider(provider);
-    setError(null);
-    await signInWithProvider(provider);
-    // The user will be redirected by Supabase
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
@@ -162,6 +170,60 @@ function LoginPageContent() {
               </motion.button>
             ))}
           </div>
+
+          {/* Agreement Checkbox */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mt-6"
+          >
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="agreement"
+                checked={agreementChecked}
+                onChange={(e) => {
+                  setAgreementChecked(e.target.checked);
+                  setShowAgreementWarning(false);
+                }}
+                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+              />
+              <label htmlFor="agreement" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
+                I agree to the{' '}
+                <Link
+                  href="/privacy"
+                  className="text-blue-600 hover:text-blue-700 underline font-medium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Privacy Policy
+                </Link>{' '}
+                and{' '}
+                <Link
+                  href="/terms"
+                  className="text-blue-600 hover:text-blue-700 underline font-medium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Terms of Service
+                </Link>
+                . You must agree to these terms to continue.
+              </label>
+            </div>
+            
+            {/* Agreement Warning */}
+            {showAgreementWarning && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 mt-3"
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">Please agree to the Privacy Policy and Terms of Service to continue.</span>
+              </motion.div>
+            )}
+          </motion.div>
 
           {/* Back to Home */}
           <motion.div
