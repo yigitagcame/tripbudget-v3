@@ -120,15 +120,6 @@ export default function Navbar() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="text-gray-700 hover:text-blue-600 transition-colors duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 rounded-lg px-3 py-2"
-                >
-                  <Link href="/login">
-                    Sign In
-                  </Link>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
                 >
                   <Link href="/chat" className="flex items-center space-x-2">
@@ -221,16 +212,6 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <motion.button
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 }}
-                      className="w-full text-left px-4 py-3 text-gray-900 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-all duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-                    >
-                      <Link href="/login" className="flex items-center space-x-3" onClick={() => setIsOpen(false)}>
-                        <span>Sign In</span>
-                      </Link>
-                    </motion.button>
                     <motion.button
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
