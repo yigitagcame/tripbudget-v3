@@ -92,7 +92,7 @@ export default function ContactPage() {
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Have questions about Trip Budget? Need help with your travel planning? 
-              We're here to help you make the most of your adventures.
+              We&apos;re here to help you make the most of your adventures.
             </p>
           </motion.div>
         </div>
@@ -118,7 +118,7 @@ export default function ContactPage() {
                   Send us a Message
                 </h2>
                 <p className="text-gray-600">
-                  Fill out the form below and we'll get back to you as soon as possible.
+                  Fill out the form below and we&apos;ll get back to you as soon as possible.
                 </p>
               </div>
 
@@ -184,7 +184,7 @@ export default function ContactPage() {
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="What's this about?"
+                    placeholder="What&apos;s this about?"
                   />
                 </div>
 

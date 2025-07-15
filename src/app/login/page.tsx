@@ -1,32 +1,47 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plane, Loader2, Twitter, LucideIcon, AlertCircle } from 'lucide-react';
+import { Plane, Loader2, Twitter, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const providers = [
   {
     name: 'Google',
     id: 'google',
-    icon: (props: any) => (
+    icon: (props: React.SVGProps<SVGSVGElement>) => (
       <svg {...props} viewBox="0 0 24 24" fill="none"><g><path d="M21.805 10.023h-9.765v3.977h5.617c-.242 1.242-1.484 3.648-5.617 3.648-3.375 0-6.125-2.789-6.125-6.148 0-3.359 2.75-6.148 6.125-6.148 1.922 0 3.211.82 3.953 1.523l2.703-2.625c-1.719-1.617-3.953-2.617-6.656-2.617-5.523 0-10 4.477-10 10s4.477 10 10 10c5.781 0 9.594-4.055 9.594-9.773 0-.656-.07-1.156-.156-1.477z" fill="#4285F4"/><path d="M3.545 7.548l3.289 2.414c.898-1.367 2.367-2.414 4.166-2.414 1.148 0 2.211.398 3.039 1.055l2.719-2.648c-1.484-1.367-3.398-2.203-5.758-2.203-3.516 0-6.484 2.367-7.547 5.555z" fill="#34A853"/><path d="M12 22c2.672 0 4.922-.883 6.563-2.406l-3.047-2.492c-.844.57-1.922.914-3.516.914-2.734 0-5.055-1.844-5.883-4.336l-3.242 2.5c1.547 3.125 4.844 5.32 8.125 5.32z" fill="#FBBC05"/><path d="M21.805 10.023h-9.765v3.977h5.617c-.242 1.242-1.484 3.648-5.617 3.648-3.375 0-6.125-2.789-6.125-6.148 0-3.359 2.75-6.148 6.125-6.148 1.922 0 3.211.82 3.953 1.523l2.703-2.625c-1.719-1.617-3.953-2.617-6.656-2.617-5.523 0-10 4.477-10 10s4.477 10 10 10c5.781 0 9.594-4.055 9.594-9.773 0-.656-.07-1.156-.156-1.477z" fill="#4285F4"/></g></svg>
     ),
   },
   {
     name: 'X.com',
     id: 'twitter',
-    icon: (props: any) => <Twitter {...props} />,
+    icon: (props: React.SVGProps<SVGSVGElement>) => <Twitter {...props} />,
   },
 ];
 
-export default function LoginPage() {
-  const { signInWithProvider } = useAuth();
+function LoginPageContent() {
+  const { signInWithProvider, user, loading } = useAuth();
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [showAgreementWarning, setShowAgreementWarning] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Redirect authenticated users to chat page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!loading && user) {
+        console.log('LoginPage - User already authenticated, redirecting to chat');
+        router.push('/chat');
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [user, loading, router]);
 
   useEffect(() => {
     const errorParam = searchParams.get('error');
@@ -45,11 +60,55 @@ export default function LoginPage() {
   }, [searchParams]);
 
   const handleSocialLogin = async (provider: 'google' | 'twitter') => {
+    if (!agreementChecked) {
+      setShowAgreementWarning(true);
+      return;
+    }
+
     setLoadingProvider(provider);
     setError(null);
+    setShowAgreementWarning(false);
     await signInWithProvider(provider);
     // The user will be redirected by Supabase
   };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
+              <Plane className="w-8 h-8 text-white" />
+            </div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message if user is authenticated
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
+              <Plane className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Redirecting...
+            </h2>
+            <p className="text-gray-600">
+              You are already signed in
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
@@ -112,6 +171,60 @@ export default function LoginPage() {
             ))}
           </div>
 
+          {/* Agreement Checkbox */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mt-6"
+          >
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="agreement"
+                checked={agreementChecked}
+                onChange={(e) => {
+                  setAgreementChecked(e.target.checked);
+                  setShowAgreementWarning(false);
+                }}
+                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+              />
+              <label htmlFor="agreement" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
+                I agree to the{' '}
+                <Link
+                  href="/privacy"
+                  className="text-blue-600 hover:text-blue-700 underline font-medium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Privacy Policy
+                </Link>{' '}
+                and{' '}
+                <Link
+                  href="/terms"
+                  className="text-blue-600 hover:text-blue-700 underline font-medium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Terms of Service
+                </Link>
+                . You must agree to these terms to continue.
+              </label>
+            </div>
+            
+            {/* Agreement Warning */}
+            {showAgreementWarning && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 mt-3"
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">Please agree to the Privacy Policy and Terms of Service to continue.</span>
+              </motion.div>
+            )}
+          </motion.div>
+
           {/* Back to Home */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -129,5 +242,25 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
+              <Plane className="w-8 h-8 text-white" />
+            </div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 } 

@@ -41,13 +41,13 @@ export default function GetMoreMessagesModal({
       const referral = await MessageCounterService.createReferral(user.id, 'friend@example.com'); // We'll use a placeholder email
       
       // Generate the invitation link
-      const baseUrl = window.location.origin;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
       const link = `${baseUrl}/invite/${referral.referral_code}`;
       setInvitationLink(link);
     } catch (error) {
       console.error('Error generating invitation link:', error);
       // Fallback to generating a random code if database fails
-      const baseUrl = window.location.origin;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
       const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const link = `${baseUrl}/invite/${referralCode}`;
       setInvitationLink(link);

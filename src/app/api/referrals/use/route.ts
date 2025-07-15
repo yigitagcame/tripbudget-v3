@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { MessageCounterService } from '@/lib/message-counter-service';
+import { MessageCounterServiceServer } from '@/lib/server/message-counter-service-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Use the referral code
-    await MessageCounterService.useReferral(referralCode, session.user.id);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    await MessageCounterServiceServer.useReferral(referralCode, session.user.id);
     
     return NextResponse.json({ 
       success: true,
