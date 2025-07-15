@@ -52,6 +52,11 @@ An AI-powered travel planning application that helps you create personalized iti
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   
+   # Message Counter System Configuration
+   MESSAGE_COUNTER_INITIAL_COUNT=50
+   MESSAGE_COUNTER_REFERRAL_BONUS=25
+   NEXT_PUBLIC_MESSAGE_COUNTER_REFERRAL_BONUS=25
    ```
 
 4. **Get your API keys**
@@ -83,6 +88,7 @@ An AI-powered travel planning application that helps you create personalized iti
 - `npm run test:validation` - Test validation functions
 - `npm run test:chat` - Test chat API integration
 - `npm run test:auth` - Test authentication system
+- `npm run test:invitation` - Test invitation link system
 
 ## 🏗️ Tech Stack
 
@@ -188,6 +194,9 @@ The application uses Supabase for authentication with the following features:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
+| `MESSAGE_COUNTER_INITIAL_COUNT` | Initial message count for new users | No (default: 50) |
+| `MESSAGE_COUNTER_REFERRAL_BONUS` | Bonus messages for successful referrals | No (default: 25) |
+| `NEXT_PUBLIC_MESSAGE_COUNTER_REFERRAL_BONUS` | Client-side referral bonus display | No (default: 25) |
 
 ### API Endpoints
 

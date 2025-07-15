@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Plane, Calendar, Users, MapPin, Sparkles, RefreshCw } from 'lucide-react';
+import MessageCounter from './MessageCounter';
 
 interface TripDetails {
   from: string;
@@ -14,9 +15,10 @@ interface TripDetails {
 interface TripDetailsSidebarProps {
   tripDetails: TripDetails;
   onTripDetailsChange?: (details: TripDetails) => void;
+  onGetMoreMessages?: () => void;
 }
 
-export default function TripDetailsSidebar({ tripDetails, onTripDetailsChange }: TripDetailsSidebarProps) {
+export default function TripDetailsSidebar({ tripDetails, onTripDetailsChange, onGetMoreMessages }: TripDetailsSidebarProps) {
   // Check if AI has provided trip details
   const hasTripDetails = tripDetails.from || tripDetails.to || tripDetails.departDate || tripDetails.returnDate || tripDetails.passengers > 0;
 
@@ -32,7 +34,7 @@ export default function TripDetailsSidebar({ tripDetails, onTripDetailsChange }:
     >
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 mb-4">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
             <Plane className="w-5 h-5 text-white" />
           </div>
@@ -40,6 +42,7 @@ export default function TripDetailsSidebar({ tripDetails, onTripDetailsChange }:
             <h2 className="text-xl font-semibold text-gray-900">Travel Details</h2>
           </div>
         </div>
+        <MessageCounter onGetMoreMessages={onGetMoreMessages} />
       </div>
 
       {/* Content */}
