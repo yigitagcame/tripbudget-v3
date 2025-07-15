@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import TripDetailsSidebar from '@/components/chat/TripDetailsSidebar';
@@ -17,7 +17,7 @@ interface TripPlanItem extends Card {
   id: number;
 }
 
-export default function ChatPage() {
+function ChatPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -198,7 +198,8 @@ export default function ChatPage() {
 
       if (aiResponse && aiResponse.content && typeof aiResponse.content === 'string') {
         if (aiResponse.tripContext) {
-          const hasChanges =
+          // Update trip details if AI provided new context
+          const hasChanges = 
             aiResponse.tripContext.from !== tripDetails.from ||
             aiResponse.tripContext.to !== tripDetails.to ||
             aiResponse.tripContext.departDate !== tripDetails.departDate ||
@@ -312,94 +313,105 @@ export default function ChatPage() {
 
   if (loading || chatHistoryLoading) {
     return (
-      <ProtectedRoute>
-        <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your trip and chat history...</p>
-          </div>
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your trip and chat history...</p>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   if (!trip) {
     return (
-      <ProtectedRoute>
-        <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Trip not found</p>
-            <button 
-              onClick={() => router.push('/trips')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              View My Trips
-            </button>
-          </div>
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Trip not found</p>
+          <button 
+            onClick={() => router.push('/trips')}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            View My Trips
+          </button>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   return (
-    <ProtectedRoute>
-      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full py-8">
+    <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full py-8">
 
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-            {/* Trip Details Sidebar */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
-            >
-              <TripDetailsSidebar 
-                tripDetails={tripDetails}
-                onTripDetailsChange={handleTripDetailsChange}
-                onGetMoreMessages={handleGetMoreMessages}
-              />
-            </motion.div>
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+          {/* Trip Details Sidebar */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
+          >
+            <TripDetailsSidebar 
+              tripDetails={tripDetails}
+              onTripDetailsChange={handleTripDetailsChange}
+              onGetMoreMessages={handleGetMoreMessages}
+            />
+          </motion.div>
 
-            {/* Chat Window */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="lg:col-span-6 h-full min-h-[500px] lg:min-h-0"
-            >
-              <ChatWindow 
-                messages={messages}
-                onSendMessage={handleSendMessage}
-                isLoading={isLoading}
-                tripDetails={tripDetails}
-                onAddToTripPlan={handleAddToTripPlan}
-                currency={currency}
-                onCurrencyChange={setCurrency}
-                showGetMoreMessagesModal={showGetMoreMessagesModal}
-                onOpenGetMoreMessagesModal={() => setShowGetMoreMessagesModal(true)}
-                onCloseGetMoreMessagesModal={() => setShowGetMoreMessagesModal(false)}
-              />
-            </motion.div>
+          {/* Chat Window */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-6 h-full min-h-[500px] lg:min-h-0"
+          >
+            <ChatWindow 
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              tripDetails={tripDetails}
+              onAddToTripPlan={handleAddToTripPlan}
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              showGetMoreMessagesModal={showGetMoreMessagesModal}
+              onOpenGetMoreMessagesModal={() => setShowGetMoreMessagesModal(true)}
+              onCloseGetMoreMessagesModal={() => setShowGetMoreMessagesModal(false)}
+            />
+          </motion.div>
 
-            {/* Trip Plan Stack */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
-            >
-              <TripPlanStack 
-                tripPlan={tripPlan}
-                onRemoveItem={handleRemoveFromTripPlan}
-                onAddItem={handleAddToTripPlan}
-              />
-            </motion.div>
-          </div>
+          {/* Trip Plan Stack */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="lg:col-span-3 h-full min-h-[400px] lg:min-h-0"
+          >
+            <TripPlanStack 
+              tripPlan={tripPlan}
+              onRemoveItem={handleRemoveFromTripPlan}
+              onAddItem={handleAddToTripPlan}
+            />
+          </motion.div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <ProtectedRoute>
+      <Suspense fallback={
+        <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }>
+        <ChatPageContent />
+      </Suspense>
     </ProtectedRoute>
   );
 } 

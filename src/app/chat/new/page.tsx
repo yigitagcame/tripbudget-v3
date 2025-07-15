@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { sendChatMessage } from '@/lib/chat-api';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
-export default function NewTripPage() {
+function NewTripContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -83,5 +83,25 @@ export default function NewTripPage() {
         </div>
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function NewTripPage() {
+  return (
+    <Suspense fallback={
+      <ProtectedRoute>
+        <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
+              <p className="text-gray-600">Please wait...</p>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    }>
+      <NewTripContent />
+    </Suspense>
   );
 } 

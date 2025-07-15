@@ -49,16 +49,7 @@ interface TripDetails {
   passengers: number;
 }
 
-interface Card {
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination' | 'package' | 'seasonal';
-  title: string;
-  description: string;
-  price?: string;
-  rating?: number;
-  location?: string;
-  image?: string;
-  bookingUrl?: string;
-}
+// Card interface removed as it's not used
 
 interface AIResponse {
   message: string;
@@ -242,7 +233,7 @@ function createContextSummary(conversationHistory: ChatMessage[]): string {
 }
 
 // Function to create trip context string from database data
-function createTripContextString(tripData: any): string {
+function createTripContextString(tripData: { origin?: string; destination?: string; departure_date?: string; return_date?: string; passenger_count?: number }): string {
   if (!tripData) {
     return '';
   }
@@ -437,9 +428,9 @@ export async function POST(request: NextRequest) {
     });
 
     let aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
-    let flightCards: any[] = [];
-    let accommodationCards: any[] = [];
-    let creativeCards: any[] = [];
+    let flightCards: Array<{ type: string; title: string; description: string; price?: string; rating?: number; location?: string; image?: string; bookingUrl?: string }> = [];
+    let accommodationCards: Array<{ type: string; title: string; description: string; price?: string; rating?: number; location?: string; image?: string; bookingUrl?: string }> = [];
+    let creativeCards: Array<{ type: string; title: string; description: string; price?: string; rating?: number; location?: string; image?: string; bookingUrl?: string }> = [];
 
     // Handle tool calls
     const responseMessage = completion.choices[0]?.message;
