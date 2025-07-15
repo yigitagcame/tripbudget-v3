@@ -60,6 +60,9 @@ An AI-powered travel planning application that helps you create personalized iti
    
    # Brevo Newsletter Configuration
    BREVO_API_KEY=your_brevo_api_key_here
+   
+   # Contact Form Configuration
+   SUPPORT_EMAIL_ADDRESS=your_support_email_here
    ```
 
 4. **Get your API keys**
@@ -94,6 +97,7 @@ An AI-powered travel planning application that helps you create personalized iti
 - `npm run test:auth` - Test authentication system
 - `npm run test:invitation` - Test invitation link system
 - `npm run test:newsletter` - Test newsletter integration
+- `npm run test:contact` - Test contact form integration
 
 ## 🏗️ Tech Stack
 
@@ -202,6 +206,8 @@ The application uses Supabase for authentication with the following features:
 | `MESSAGE_COUNTER_INITIAL_COUNT` | Initial message count for new users | No (default: 50) |
 | `MESSAGE_COUNTER_REFERRAL_BONUS` | Bonus messages for successful referrals | No (default: 25) |
 | `NEXT_PUBLIC_MESSAGE_COUNTER_REFERRAL_BONUS` | Client-side referral bonus display | No (default: 25) |
+| `BREVO_API_KEY` | Brevo API key for newsletter and contact form | Yes |
+| `SUPPORT_EMAIL_ADDRESS` | Support email address for contact form | Yes |
 
 ### API Endpoints
 
