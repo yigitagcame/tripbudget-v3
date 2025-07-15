@@ -1,11 +1,51 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Mail, MessageCircle, Twitter, Linkedin, Instagram, Globe, Heart, Plane } from 'lucide-react';
+import { Mail, MessageCircle, Twitter, Linkedin, Instagram, Globe, Heart, Plane, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showSuccess, showError } = useToast();
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email.trim()) {
+      showError('Please enter your email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showSuccess(data.message);
+        setEmail('');
+      } else {
+        showError(data.error || 'Failed to subscribe to newsletter');
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      showError('Failed to subscribe to newsletter. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -119,16 +159,30 @@ export default function Footer() {
             <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
               Learn how to plan better trips with AI, avoid common planning mistakes, and get exclusive offers.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-                Subscribe
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Subscribing...
+                  </>
+                ) : (
+                  'Subscribe'
+                )}
               </button>
-            </div>
+            </form>
           </div>
         </motion.div>
 
