@@ -1,5 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { 
+  flightSearchFunction, 
+  executeFlightSearch, 
+  accommodationSearchFunction, 
+  executeAccommodationSearch,
+  cheapestDestinationFunction,
+  executeCheapestDestinationSearch,
+  packageDealFunction,
+  executePackageDealSearch,
+  seasonalPriceFunction,
+  executeSeasonalPriceAnalysis
+} from '@/lib/openai-functions';
+import { transformFlightResultsToCards } from '@/lib/flight-transformer';
+import { transformAccommodationResultsToCards } from '@/lib/accommodation-transformer';
+import { 
+  transformCheapestDestinationResults, 
+  transformPackageDealResults, 
+  transformSeasonalAnalysisResults 
+} from '@/lib/creative-results-transformer';
+import { validateFlightSearchParams, handleFlightSearchError, validateAccommodationSearchParams, handleAccommodationSearchError } from '@/lib/validation';
+import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
+// NOTE: We use the server-side trip service here because the API route needs to bypass RLS for trip verification and updates.
+// This service uses the Supabase service role key and MUST NEVER be imported in client-side code.
+import { tripServiceServer } from '@/lib/server/trip-service-server';
+import { MessageService } from '@/lib/message-service';
+import { MessageCounterServiceServer } from '@/lib/server/message-counter-service-server';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -23,7 +50,7 @@ interface TripDetails {
 }
 
 interface Card {
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place';
+  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'place' | 'destination' | 'package' | 'seasonal';
   title: string;
   description: string;
   price?: string;
@@ -35,9 +62,15 @@ interface Card {
 
 interface AIResponse {
   message: string;
-  cards?: Card[];
-  followUp: string;
-  tripContext: TripDetails;
+  suggestions?: Array<{
+    type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'place' | 'destination' | 'package' | 'seasonal';
+    title: string;
+    description: string;
+    price?: string;
+    location?: string;
+  }>;
+  "follow-up message": string;
+  "trip-context": TripDetails;
 }
 
 // Function to get current date in a readable format
@@ -52,91 +85,124 @@ function getCurrentDateString(): string {
   return now.toLocaleDateString('en-US', options);
 }
 
+// Function to sanitize JSON response from AI
+function sanitizeJSONResponse(text: string): string {
+  return text
+    .replace(/^```json\s*/i, '')
+    .replace(/^```/, '')
+    .replace(/```$/, '')
+    .trim();
+}
+
 
 
 // System prompt for the AI travel assistant
-const SYSTEM_PROMPT = `You are an AI travel assistant that helps users plan their trips. You should:
+const SYSTEM_PROMPT = `You are an AI travel assistant that helps users plan their trips.
 
-1. Extract and maintain trip context from EVERY user message
-2. Provide helpful, personalized travel recommendations based on the specific trip details
-3. Be conversational and friendly
-4. Ask follow-up questions when needed
-5. Provide realistic pricing and details based on the destination and context
-6. Give specific, actionable advice rather than generic suggestions
-7. Always reference the current trip details when making recommendations
+CRITICAL: You MUST respond using ONLY a valid JSON object. Do NOT include any text outside the JSON. Do NOT include backticks or markdown.
 
-CRITICAL: You MUST extract and update trip details from EVERY user message. If the user mentions:
-- A destination (city, country, place): update the "to" field
-- An origin location: update the "from" field  
-- Travel dates (month, year, specific dates): update "departDate" and "returnDate"
-- Number of travelers: update the "passengers" field
-
-You are responsible for maintaining the complete trip context throughout the conversation. Always preserve existing trip details and add new information as it becomes available.
-
-IMPORTANT: You must always consider the current trip context when responding. If trip details are provided, base ALL your recommendations on those specific details. If the user asks about something that doesn't match the current trip context, gently remind them of the current trip details and ask if they want to change their plans.
-
-When providing recommendations:
-- For flights: mention realistic airlines, duration, and price ranges for the specific route
-- For hotels: suggest appropriate accommodation types and price ranges for the destination
-- For restaurants: recommend cuisine types and price ranges typical for the location
-- For activities: suggest relevant attractions and experiences for the destination
-- Always consider the number of passengers when making recommendations
-- Always consider the current date when making recommendations about availability, seasonal events, or time-sensitive information
-
-CRITICAL: You must respond in the following JSON format ONLY:
-
+RESPONSE FORMAT:
 {
-  "message": "Your conversational response to the user (DO NOT include the next step question here)",
-  "cards": [
+  "message": "Your conversational response to the user",
+  "suggestions": [
     {
-      "type": "flight|hotel|restaurant|activity|transport|place",
-      "title": "Name of the recommendation",
+      "type": "flight|hotel|restaurant|activity|place|destination",
+      "title": "Name",
       "description": "Brief description",
-      "price": "Price range or specific price",
-      "rating": 4.5,
-      "location": "Location details",
-      "image": "URL to image (optional)",
-      "bookingUrl": "URL to booking page (optional)"
+      "price": "Price range",
+      "location": "Location"
     }
   ],
-  "followUp": "The specific next step or follow-up question (this will be displayed separately in the Next Steps section)",
-  "tripContext": {
-    "from": "Updated origin location",
-    "to": "Updated destination", 
-    "departDate": "Updated departure date (YYYY-MM-DD)",
-    "returnDate": "Updated return date (YYYY-MM-DD)",
-    "passengers": 2
+  "follow-up message": "Your follow-up question or next step",
+  "trip-context": {
+    "from": "origin location or empty string",
+    "to": "destination or empty string", 
+    "departDate": "YYYY-MM-DD or empty string",
+    "returnDate": "YYYY-MM-DD or empty string",
+    "passengers": 0
   }
 }
 
-MANDATORY: You MUST ALWAYS include the tripContext field in your response, even if no trip details are known. If no trip details are available, use empty strings for text fields and 0 for passengers.
+CURRENCY: Always display prices in the user's preferred currency (EUR for Euro, USD for US Dollar). When making recommendations, consider the currency context and mention prices in the appropriate format.
 
-The cards array is optional - only include it when you want to suggest specific places, flights, hotels, etc. The tripContext should always reflect the current trip details, updating them if new information is provided in the user's message.
+TRIP CONTEXT:
+- CRITICAL: If trip context is provided in the system prompt, you MUST preserve it and only update fields when the user explicitly provides new information
+- Extract destination from user messages → update "to" field (only if not already set or user provides new destination)
+- Extract origin from user messages → update "from" field (only if not already set or user provides new origin)
+- Extract dates from user messages → update "departDate" and "returnDate" (only if not already set or user provides new dates)
+- Extract number of travelers → update "passengers" (only if not already set or user provides new passenger count)
+- NEVER overwrite existing trip context unless the user explicitly provides new information
+- Always use the existing trip context as the foundation for your recommendations
 
-IMPORTANT FOR FOLLOW-UP: The "followUp" field should contain the specific next step or question, separate from your main message. The main message should be conversational, and the followUp should be the actionable part. 
+SUGGESTIONS:
+- Include suggestions array when user asks about flights, hotels, restaurants, activities, places, or destinations
+- Use "destination" type for destination suggestions (cities, countries, regions)
+- Leave suggestions empty array [] if no specific recommendations needed
 
-FORMATTING RULES:
-- If asking for multiple pieces of information, format as a bulleted list
-- Use "- " for each bullet point
-- Keep each bullet point concise and clear
+FLIGHT SEARCH:
+- Use search_flights function when users ask about flights
+- Always use current trip context for searches
+- Detect user preferences for flight search type:
+  * "cheapest" - when user asks for cheapest, lowest price, budget options
+  * "fastest" - when user asks for fastest, quickest, shortest duration
+  * "best" - when user asks for best, premium, or doesn't specify (default)
+- Limit results to 2 flights per search to avoid overwhelming the user
 
-For example:
+ACCOMMODATION SEARCH:
+- Use search_accommodation function when users ask about hotels, accommodations, places to stay
+- Always use current trip context for searches
+- Detect user preferences for accommodation search type:
+  * "budget" - when user asks for budget, cheap, affordable, low-cost options
+  * "luxury" - when user asks for luxury, premium, high-end, 5-star options
+  * "best" - when user asks for best, recommended, or doesn't specify (default)
+- Limit results to 3 hotels per search to provide good options
 
-MESSAGE: "That sounds like a fantastic idea! Riga is a beautiful city especially during the summer."
-FOLLOW-UP: "To provide the best assistance, could you please provide me with:
-- the dates of your travel
-- the city you'll be traveling from
-- the number of people joining the trip?"
+CREATIVE SEARCH CAPABILITIES:
 
-MESSAGE: "I found some great flight options for your trip to Tokyo!"
-FOLLOW-UP: "Would you like me to help you find hotels in Tokyo, or would you prefer to explore activities first?"
+1. CHEAPEST DESTINATION SEARCH:
+- Use find_cheapest_destination function when users ask:
+  * "What's the cheapest place to go?"
+  * "Where can I travel on a budget?"
+  * "Show me the cheapest destinations"
+  * "What's the most affordable place to visit?"
+- This function compares multiple destinations for total cost (flight + accommodation)
+- Always provide the origin location (fly_from) and travel dates
+- The function will return top 3 cheapest destinations with cost breakdown
 
-MESSAGE: "Paris in March is absolutely magical! The weather is starting to warm up and the crowds are smaller than peak season."
-FOLLOW-UP: "Could you please provide:
-- your departure city
-- the number of people traveling?"
+2. PACKAGE DEAL OPTIMIZATION:
+- Use find_package_deal function when users ask:
+  * "Find me a complete package to [destination]"
+  * "Show me flight and hotel packages"
+  * "What's the best deal for [destination]?"
+  * "I want a complete trip package"
+- This function finds the best flight + accommodation combinations
+- Consider user's budget and preferences (price vs. quality vs. location)
+- Return top 3 package options with total cost
 
-Always be helpful and provide actionable advice based on the user's specific trip details.`;
+3. SEASONAL PRICE ANALYSIS:
+- Use analyze_seasonal_prices function when users ask:
+  * "When is the best time to visit [destination]?"
+  * "What's the cheapest time to go to [destination]?"
+  * "When should I book for [destination]?"
+  * "Show me price trends for [destination]"
+- This function analyzes prices across different months
+- Provide origin, destination, and date range to analyze
+- Return monthly price trends and recommendations
+
+INTENT DETECTION:
+- "cheapest place to go" → find_cheapest_destination
+- "best time to visit" → analyze_seasonal_prices  
+- "complete package" → find_package_deal
+- "budget travel" → combine cheapest flights + budget accommodation
+- "luxury trip" → combine premium flights + luxury accommodation
+- "quick getaway" → focus on shorter duration options
+- "family vacation" → consider child-friendly destinations and accommodation
+
+Be helpful, conversational, and always consider the current trip context when making recommendations.`;
+
+
+
+
 
 // Function to create a context summary for long conversations
 function createContextSummary(conversationHistory: ChatMessage[]): string {
@@ -175,13 +241,69 @@ function createContextSummary(conversationHistory: ChatMessage[]): string {
   return summary.length > 0 ? `Context: ${summary.join('. ')}` : '';
 }
 
+// Function to create trip context string from database data
+function createTripContextString(tripData: any): string {
+  if (!tripData) {
+    return '';
+  }
+
+  const hasExistingContext = tripData.origin || tripData.destination || tripData.departure_date || tripData.return_date || tripData.passenger_count;
+  
+  if (!hasExistingContext) {
+    return '';
+  }
+
+  return `\n\nCURRENT TRIP CONTEXT FROM DATABASE:
+From: ${tripData.origin || 'Not specified'}
+To: ${tripData.destination || 'Not specified'}
+Departure Date: ${tripData.departure_date || 'Not specified'}
+Return Date: ${tripData.return_date || 'Not specified'}
+Passengers: ${tripData.passenger_count || 0}
+
+CRITICAL: You MUST preserve and build upon these existing trip details. Only update fields when the user provides new information. Always consider these details when making recommendations.`;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Create Supabase client for server-side auth
+    const supabase = createSupabaseServerClient(request);
+
+    // Check authentication
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    
+    console.log('API - Auth cookies:', request.cookies.getAll().filter(c => c.name.includes('auth')).map(c => c.name));
+    console.log('API - Session exists:', !!session);
+    console.log('API - Session user:', session?.user?.email);
+    console.log('API - Auth error:', authError);
+    
+    if (authError || !session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check rate limit
+    const rateLimitResult = checkRateLimit(request, chatRateLimiter);
+    
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          message: 'Rate limit exceeded. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
-    const { message, conversationHistory = [] } = body;
+    const { message, conversationHistory = [], tripId, currency = 'EUR' } = body;
 
     console.log('API - Received message:', message);
     console.log('API - Received conversation history length:', conversationHistory.length);
+    console.log('API - Received tripId:', tripId);
+    console.log('API - Received currency:', currency);
 
     // Validate conversation history is an array
     if (!Array.isArray(conversationHistory)) {
@@ -198,6 +320,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate tripId is provided
+    if (!tripId) {
+      return NextResponse.json(
+        { error: 'Trip ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify trip exists and belongs to user
+    console.log('API - Verifying trip exists and belongs to user');
+    const trip = await tripServiceServer.getTrip(tripId);
+    console.log('API - Trip found:', !!trip);
+    console.log('API - Trip user_id:', trip?.user_id);
+    console.log('API - Session user_id:', session.user.id);
+    
+    if (!trip || trip.user_id !== session.user.id) {
+      console.log('API - Trip verification failed - trip not found or access denied');
+      return NextResponse.json(
+        { error: 'Trip not found or access denied' },
+        { status: 404 }
+      );
+    }
+    
+    console.log('API - Trip verification successful');
+
+    // Check if user has enough messages
+    const hasEnoughMessages = await MessageCounterServiceServer.hasEnoughMessages(session.user.id);
+    
+    if (!hasEnoughMessages) {
+      return NextResponse.json(
+        { 
+          error: 'Insufficient messages',
+          message: 'You have run out of messages. Please earn more messages to continue chatting.',
+          messageCount: 0
+        },
+        { status: 402 }
+      );
+    }
+
+    const currentTripId = tripId;
+
+    // Load existing trip context from database
+    const existingTripContext = createTripContextString(trip);
+    console.log('API - Existing trip context loaded:', existingTripContext ? 'Yes' : 'No');
+
     // Prepare conversation history for OpenAI with length limits
     const MAX_CONVERSATION_MESSAGES = 20; // Limit to last 20 messages to manage token usage
     const MAX_MESSAGES_FOR_SUMMARY = 30; // If more than this, use summary instead
@@ -205,7 +372,7 @@ export async function POST(request: NextRequest) {
     const filteredHistory = conversationHistory
       .filter((msg: ChatMessage) => msg.content && msg.content.trim() !== '');
     
-    let messages;
+    let messages: any[];
     
     if (filteredHistory.length > MAX_MESSAGES_FOR_SUMMARY) {
       // For very long conversations, use summary + recent messages
@@ -213,7 +380,7 @@ export async function POST(request: NextRequest) {
       const recentMessages = filteredHistory.slice(-10); // Keep last 10 messages
       
       messages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT + '\n\n' + contextSummary },
+        { role: 'system' as const, content: SYSTEM_PROMPT + '\n\n' + contextSummary + existingTripContext },
         ...recentMessages.map((msg: ChatMessage) => ({
           role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
           content: msg.content.trim()
@@ -225,7 +392,7 @@ export async function POST(request: NextRequest) {
       const limitedHistory = filteredHistory.slice(-MAX_CONVERSATION_MESSAGES);
       
       messages = [
-        { role: 'system' as const, content: SYSTEM_PROMPT },
+        { role: 'system' as const, content: SYSTEM_PROMPT + existingTripContext },
         ...limitedHistory.map((msg: ChatMessage) => ({
           role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
           content: msg.content.trim()
@@ -236,109 +403,400 @@ export async function POST(request: NextRequest) {
 
     // Always include current date in the system prompt
     const currentDate = getCurrentDateString();
-    const tripContext = `\n\nCURRENT DATE: ${currentDate}\n\nHelp the user establish their travel plans by asking about destinations, dates, and number of travelers. Always extract and maintain trip context from the conversation.`;
+    const baseContext = `\n\nCURRENT DATE: ${currentDate}\nCURRENCY: ${currency}\n\nHelp the user establish their travel plans by asking about destinations, dates, and number of travelers. Always extract and maintain trip context from the conversation. Display all prices in ${currency === 'EUR' ? 'Euro (€)' : 'US Dollar ($)'}.`;
     
-    messages[0].content += tripContext;
+    messages[0].content += baseContext;
 
+    // Store the user message in the database
+    await MessageService.createMessage({
+      trip_id: currentTripId,
+      user_id: session.user.id,
+      type: 'user',
+      content: message,
+      cards: undefined,
+      follow_up: undefined,
+      trip_context: undefined
+    });
 
 
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages,
       temperature: 0.7,
       max_tokens: 1500,
+      tools: [
+        flightSearchFunction, 
+        accommodationSearchFunction,
+        cheapestDestinationFunction,
+        packageDealFunction,
+        seasonalPriceFunction
+      ],
+      tool_choice: "auto",
+      response_format: { type: "json_object" }
     });
 
-    const aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+    let aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+    let flightCards: any[] = [];
+    let accommodationCards: any[] = [];
+    let creativeCards: any[] = [];
+
+    // Handle tool calls
+    const responseMessage = completion.choices[0]?.message;
+    if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
+      console.log('API - Processing tool calls:', responseMessage.tool_calls.length);
+      
+      // Add the assistant message with tool calls to the conversation
+      messages.push({
+        role: 'assistant' as const,
+        content: responseMessage.content || '',
+        tool_calls: responseMessage.tool_calls
+      });
+      
+      for (const toolCall of responseMessage.tool_calls) {
+        if (toolCall.function.name === 'search_flights') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Flight search args:', args);
+            
+            // Add currency to flight search args
+            args.curr = currency;
+            
+            // Validate flight search parameters
+            const validationErrors = validateFlightSearchParams(args);
+            if (validationErrors.length > 0) {
+              const errorMessage = `Validation errors: ${validationErrors.join(', ')}`;
+              console.error('Flight search validation errors:', validationErrors);
+              messages.push({
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  success: false,
+                  error: errorMessage
+                }),
+                tool_call_id: toolCall.id
+              });
+              continue;
+            }
+            
+            const flightResults = await executeFlightSearch(args);
+            console.log('API - Flight search results:', flightResults.success ? 'Success' : 'Failed');
+            
+            // Transform flight results to cards
+            if (flightResults.success) {
+              flightCards = transformFlightResultsToCards(flightResults, currency);
+            }
+            
+            // Add flight results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(flightResults),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing flight search:', error);
+            const userFriendlyError = handleFlightSearchError(error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: userFriendlyError
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'search_accommodation') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Accommodation search args:', args);
+            
+            // Add currency to accommodation search args
+            args.currency_code = currency;
+            
+            // Validate accommodation search parameters
+            const validationErrors = validateAccommodationSearchParams(args);
+            if (validationErrors.length > 0) {
+              const errorMessage = `Validation errors: ${validationErrors.join(', ')}`;
+              console.error('Accommodation search validation errors:', validationErrors);
+              messages.push({
+                role: 'tool' as const,
+                content: JSON.stringify({
+                  success: false,
+                  error: errorMessage
+                }),
+                tool_call_id: toolCall.id
+              });
+              continue;
+            }
+            
+            const accommodationResults = await executeAccommodationSearch(args);
+            console.log('API - Accommodation search results:', accommodationResults.success ? 'Success' : 'Failed');
+            
+            // Transform accommodation results to cards
+            if (accommodationResults.success && accommodationResults.data) {
+              accommodationCards = transformAccommodationResultsToCards(accommodationResults.data);
+            }
+            
+            // Add accommodation results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(accommodationResults),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing accommodation search:', error);
+            const userFriendlyError = handleAccommodationSearchError(error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: userFriendlyError
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'find_cheapest_destination') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Cheapest destination search args:', args);
+            
+            const results = await executeCheapestDestinationSearch(args);
+            console.log('API - Cheapest destination search results:', results.success ? 'Success' : 'Failed');
+            
+            // Transform results to cards
+            if (results.success && results.data) {
+              const destinationCards = transformCheapestDestinationResults(results.data, currency);
+              creativeCards = [...creativeCards, ...destinationCards];
+            }
+            
+            // Add results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(results),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing cheapest destination search:', error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: 'Failed to search for cheapest destinations'
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'find_package_deal') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Package deal search args:', args);
+            
+            const results = await executePackageDealSearch(args);
+            console.log('API - Package deal search results:', results.success ? 'Success' : 'Failed');
+            
+            // Transform results to cards
+            if (results.success && results.data) {
+              const packageCards = transformPackageDealResults(results.data, results.destination, currency);
+              creativeCards = [...creativeCards, ...packageCards];
+            }
+            
+            // Add results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(results),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing package deal search:', error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: 'Failed to search for package deals'
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        } else if (toolCall.function.name === 'analyze_seasonal_prices') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            console.log('API - Seasonal price analysis args:', args);
+            
+            const results = await executeSeasonalPriceAnalysis(args);
+            console.log('API - Seasonal price analysis results:', results.success ? 'Success' : 'Failed');
+            
+            // Transform results to cards
+            if (results.success && results.data) {
+              const seasonalCards = transformSeasonalAnalysisResults(results.data, args.fly_to, currency);
+              creativeCards = [...creativeCards, ...seasonalCards];
+            }
+            
+            // Add results to the conversation
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify(results),
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            console.error('Error executing seasonal price analysis:', error);
+            messages.push({
+              role: 'tool' as const,
+              content: JSON.stringify({
+                success: false,
+                error: 'Failed to analyze seasonal prices'
+              }),
+              tool_call_id: toolCall.id
+            });
+          }
+        }
+      }
+      
+      // Get final response from OpenAI after tool execution
+      try {
+        const finalCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages,
+          temperature: 0.7,
+          max_tokens: 1500,
+          response_format: { type: "json_object" }
+        });
+        
+        aiResponseText = finalCompletion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+      } catch (finalError) {
+        console.error('Error getting final completion after tool calls:', finalError);
+        // If the final completion fails, try one more time with explicit JSON format
+        try {
+          const fallbackCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              { role: 'system', content: 'You MUST respond using ONLY a valid JSON object. Do NOT include any text outside the JSON. Use the flight search results provided to create a helpful response.' },
+              { role: 'user', content: message },
+              ...messages.slice(-2) // Include the last assistant and tool messages
+            ],
+            temperature: 0.7,
+            max_tokens: 1500,
+            response_format: { type: "json_object" }
+          });
+          aiResponseText = fallbackCompletion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+        } catch (fallbackError) {
+          console.error('Fallback completion also failed:', fallbackError);
+          // Use the original response if available, otherwise create a simple response
+          aiResponseText = completion.choices[0]?.message?.content || 'I apologize, but I encountered an error. Please try again.';
+        }
+      }
+    }
 
     // Parse the JSON response from AI
     let aiResponse: AIResponse;
     try {
-      // First, try to parse the entire response as JSON
-      try {
-        const directParse = JSON.parse(aiResponseText);
-        if (directParse.message && directParse.tripContext) {
-          // The AI returned a complete JSON response
-          aiResponse = directParse;
-          console.log('API - Direct JSON parse successful, tripContext:', aiResponse.tripContext);
-        } else {
-          throw new Error('Not a complete AI response');
-        }
-      } catch (directParseError) {
-        // If direct parse fails, try to extract JSON from the response
-        const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          aiResponse = JSON.parse(jsonMatch[0]);
-          console.log('API - Extracted JSON parse successful, tripContext:', aiResponse.tripContext);
-        } else {
-          throw new Error('No JSON found in response');
-        }
-      }
-      
-      // Validate that followUp is present and not empty
-      if (!aiResponse.followUp || aiResponse.followUp.trim() === '') {
-        console.warn('AI response missing followUp, generating one from message');
-        // Try to extract a follow-up from the message content
-        const messageContent = aiResponse.message || aiResponseText;
-        if (messageContent.includes('Could you') || messageContent.includes('Please') || messageContent.includes('Would you')) {
-          // Extract the question part
-          const questionMatch = messageContent.match(/(Could you|Please|Would you)[^.!?]*[.!?]?/);
-          aiResponse.followUp = questionMatch ? questionMatch[0].trim() : "What would you like to know about your trip?";
-        } else {
-          aiResponse.followUp = "What would you like to know about your trip?";
-        }
-      }
+      console.log('Raw AI response:', JSON.stringify(aiResponseText));
+      const sanitizedResponse = sanitizeJSONResponse(aiResponseText);
+      aiResponse = JSON.parse(sanitizedResponse);
     } catch (error) {
       console.error('Error parsing AI response:', error);
-      console.error('Raw AI response:', aiResponseText);
-      // Fallback response
+      console.error('Raw AI response:', JSON.stringify(aiResponseText));
+      
+      // Create a fallback response if JSON parsing fails
       aiResponse = {
-        message: aiResponseText,
-        followUp: "Could you please tell me where you'd like to go and when you're planning to travel?",
-        tripContext: {
-          from: '',
-          to: '',
-          departDate: '',
-          returnDate: '',
+        message: "I found some flight options for you! Here are the details:",
+        suggestions: [],
+        "follow-up message": "Would you like me to search for more options or help you with anything else?",
+        "trip-context": {
+          from: "",
+          to: "",
+          departDate: "",
+          returnDate: "",
           passengers: 0
         }
       };
     }
 
-    // Validate and ensure all required fields are present
-    if (!aiResponse.message || aiResponse.message.trim() === '') {
-      aiResponse.message = "I'm here to help you plan your trip!";
-    }
-    
-    if (!aiResponse.followUp || aiResponse.followUp.trim() === '') {
-      aiResponse.followUp = "Could you please tell me where you'd like to go and when you're planning to travel?";
-    }
-    
-    if (!aiResponse.tripContext) {
-      aiResponse.tripContext = {
-        from: '',
-        to: '',
-        departDate: '',
-        returnDate: '',
-        passengers: 0
-      };
+    // Update trip if AI provided new details that are different from existing data
+    if (currentTripId && aiResponse["trip-context"]) {
+      const newContext = aiResponse["trip-context"];
+      const updates: any = {};
+      let hasChanges = false;
+
+      // Only update fields that have new values and are different from existing data
+      if (newContext.from && newContext.from !== trip.origin) {
+        updates.origin = newContext.from;
+        hasChanges = true;
+      }
+      if (newContext.to && newContext.to !== trip.destination) {
+        updates.destination = newContext.to;
+        hasChanges = true;
+      }
+      if (newContext.departDate && newContext.departDate !== trip.departure_date) {
+        updates.departure_date = newContext.departDate;
+        hasChanges = true;
+      }
+      if (newContext.returnDate && newContext.returnDate !== trip.return_date) {
+        updates.return_date = newContext.returnDate;
+        hasChanges = true;
+      }
+      if (newContext.passengers && newContext.passengers !== trip.passenger_count) {
+        updates.passenger_count = newContext.passengers;
+        hasChanges = true;
+      }
+
+      if (hasChanges) {
+        console.log('API - Updating trip with new context:', updates);
+        await tripServiceServer.updateTrip(currentTripId, updates);
+      } else {
+        console.log('API - No changes detected in trip context');
+      }
     }
 
-    // Create the response object
+    // Create the response object with actual database trip context
     const response = {
       id: Date.now(),
       type: 'ai' as const,
       content: aiResponse.message,
-      cards: aiResponse.cards || [],
-      followUp: aiResponse.followUp,
-      tripContext: aiResponse.tripContext,
+      cards: flightCards.length > 0 ? flightCards : 
+             accommodationCards.length > 0 ? accommodationCards : 
+             creativeCards.length > 0 ? creativeCards : 
+             (aiResponse.suggestions || []),
+      followUp: aiResponse["follow-up message"],
+      tripContext: {
+        from: trip.origin || '',
+        to: trip.destination || '',
+        departDate: trip.departure_date || '',
+        returnDate: trip.return_date || '',
+        passengers: trip.passenger_count || 0
+      },
+      tripId: currentTripId,
       timestamp: new Date()
     };
 
     console.log('API - Final response tripContext:', response.tripContext);
 
-    return NextResponse.json(response);
+    // After parsing aiResponse and before returning response:
+    await MessageService.createMessage({
+      trip_id: currentTripId,
+      user_id: session.user.id,
+      type: 'ai',
+      content: aiResponse.message,
+      cards: response.cards,
+      follow_up: response.followUp,
+      trip_context: response.tripContext
+    });
+
+    // After successful AI response, decrease message count
+    try {
+      await MessageCounterServiceServer.decreaseMessageCount(session.user.id);
+    } catch (error) {
+      console.error('Error decreasing message count:', error);
+      // Don't fail the request if counter update fails
+    }
+
+    // Create response with rate limit headers
+    const nextResponse = NextResponse.json(response);
+    
+    // Add rate limit headers
+    Object.entries(rateLimitResult.headers).forEach(([key, value]) => {
+      nextResponse.headers.set(key, value);
+    });
+
+    return nextResponse;
 
   } catch (error) {
     console.error('Chat API error:', error);

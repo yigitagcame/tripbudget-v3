@@ -6,9 +6,25 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:tequila": "tsx scripts/test-tequila-api.ts",
+    "test:booking": "tsx scripts/test-booking-api.ts",
+    "test:accommodation": "tsx scripts/test-accommodation-transformer.ts",
+    "test:accommodation-integration": "tsx scripts/test-accommodation-integration.ts",
+    "test:validation": "tsx scripts/test-validation.ts",
+    "test:chat": "tsx scripts/test-chat-api.ts",
+    "test:function-calling": "tsx scripts/test-function-calling.ts",
+    "test:flight-types": "tsx scripts/test-flight-search-types.ts",
+    "test:chat-flight-types": "tsx scripts/test-chat-flight-types.ts",
+    "test:auth": "tsx scripts/test-auth.ts",
+    "test:creative-api": "tsx scripts/test-creative-api.ts",
+    "test:creative-transformers": "tsx scripts/test-creative-transformers.ts",
+    "test:invitation": "tsx scripts/test-invitation-system.ts",
+    "validate:invitation": "tsx scripts/validate-invitation-implementation.ts",
+    "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.3",
     "framer-motion": "^12.23.0",
     "lucide-react": "^0.525.0",
@@ -23,10 +39,12 @@
     "@types/node": "^20.19.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
     "sharp": "^0.34.2",
     "tailwindcss": "^4",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }
