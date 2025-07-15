@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plane, Loader2, Twitter, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const providers = [
   {
@@ -23,10 +23,23 @@ const providers = [
 ];
 
 function LoginPageContent() {
-  const { signInWithProvider } = useAuth();
+  const { signInWithProvider, user, loading } = useAuth();
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Redirect authenticated users to chat page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!loading && user) {
+        console.log('LoginPage - User already authenticated, redirecting to chat');
+        router.push('/chat');
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [user, loading, router]);
 
   useEffect(() => {
     const errorParam = searchParams.get('error');
@@ -43,6 +56,44 @@ function LoginPageContent() {
       }
     }
   }, [searchParams]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
+              <Plane className="w-8 h-8 text-white" />
+            </div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message if user is authenticated
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-6">
+              <Plane className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Redirecting...
+            </h2>
+            <p className="text-gray-600">
+              You are already signed in
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSocialLogin = async (provider: 'google' | 'twitter') => {
     setLoadingProvider(provider);
