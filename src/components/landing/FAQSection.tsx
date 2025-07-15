@@ -137,13 +137,10 @@ export default function FAQSection() {
               Our support team is here to help you get the most out of Trip Budget and end your travel planning frustrations. 
               We typically respond within a few hours.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors">
+            <div className="flex justify-center">
+              <a href="/contact" className="bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors">
                 Contact Support
-              </button>
-              <button className="border border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white hover:text-blue-600 transition-colors">
-                Live Chat
-              </button>
+              </a>
             </div>
           </div>
         </motion.div>

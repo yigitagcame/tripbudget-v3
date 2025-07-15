@@ -57,6 +57,9 @@ An AI-powered travel planning application that helps you create personalized iti
    MESSAGE_COUNTER_INITIAL_COUNT=50
    MESSAGE_COUNTER_REFERRAL_BONUS=25
    NEXT_PUBLIC_MESSAGE_COUNTER_REFERRAL_BONUS=25
+   
+   # Brevo Newsletter Configuration
+   BREVO_API_KEY=your_brevo_api_key_here
    ```
 
 4. **Get your API keys**
@@ -65,6 +68,7 @@ An AI-powered travel planning application that helps you create personalized iti
    - **Tequila Flight API Key**: Sign up at [Tequila Kiwi Developers](https://tequila.kiwi.com/developers) for real flight data
    - **RapidAPI Key**: Sign up at [RapidAPI](https://rapidapi.com) and subscribe to the Booking.com API for accommodation data
    - **Supabase**: Create a project at [Supabase](https://supabase.com) and get your project URL and keys
+   - **Brevo API Key**: Sign up at [Brevo](https://brevo.com) and get your API key for newsletter functionality
 
 5. **Run the development server**
    ```bash
@@ -89,6 +93,7 @@ An AI-powered travel planning application that helps you create personalized iti
 - `npm run test:chat` - Test chat API integration
 - `npm run test:auth` - Test authentication system
 - `npm run test:invitation` - Test invitation link system
+- `npm run test:newsletter` - Test newsletter integration
 
 ## 🏗️ Tech Stack
 

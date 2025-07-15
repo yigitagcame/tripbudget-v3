@@ -21,9 +21,11 @@
     "test:creative-transformers": "tsx scripts/test-creative-transformers.ts",
     "test:invitation": "tsx scripts/test-invitation-system.ts",
     "validate:invitation": "tsx scripts/validate-invitation-implementation.ts",
+    "test:newsletter": "tsx scripts/test-newsletter-integration.ts",
     "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^2.5.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.3",
     "framer-motion": "^12.23.0",
