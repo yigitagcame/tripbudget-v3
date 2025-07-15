@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Lightbulb, ChevronDown } from 'lucide-react';
+import { Send, Lightbulb, ChevronDown, MessageCircle, AlertCircle } from 'lucide-react';
 import RecommendationCards from './RecommendationCards';
+import GetMoreMessagesModal from './GetMoreMessagesModal';
 import { Card } from '@/lib/chat-api';
+import { useMessageCounter } from '@/contexts/MessageCounterContext';
 
 interface Message {
   id: number;
@@ -36,6 +38,9 @@ interface ChatWindowProps {
   onAddToTripPlan?: (card: Card) => void;
   currency?: string;
   onCurrencyChange?: (currency: string) => void;
+  showGetMoreMessagesModal?: boolean;
+  onOpenGetMoreMessagesModal?: () => void;
+  onCloseGetMoreMessagesModal?: () => void;
 }
 
 export default function ChatWindow({ 
@@ -45,12 +50,17 @@ export default function ChatWindow({
   tripDetails, 
   onAddToTripPlan,
   currency = 'EUR',
-  onCurrencyChange 
+  onCurrencyChange,
+  showGetMoreMessagesModal = false,
+  onOpenGetMoreMessagesModal,
+  onCloseGetMoreMessagesModal
 }: ChatWindowProps) {
   const [inputMessage, setInputMessage] = useState('');
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
+  
+  const { messageCount, hasEnoughMessages } = useMessageCounter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,7 +85,7 @@ export default function ChatWindow({
   }, []);
 
   const handleSendMessage = () => {
-    if (inputMessage.trim()) {
+    if (inputMessage.trim() && hasEnoughMessages()) {
       onSendMessage(inputMessage.trim(), currency);
       setInputMessage('');
     }
@@ -255,21 +265,55 @@ export default function ChatWindow({
 
       {/* Input Area */}
       <div className="p-6 border-t border-gray-200">
+        {/* Out of Messages Warning */}
+        {!hasEnoughMessages() && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200"
+          >
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-800 mb-1">
+                  You've run out of messages!
+                </h3>
+                <p className="text-sm text-red-700 mb-3">
+                  You have {messageCount} messages left. Share your invitation link with friends to get more messages and continue planning your perfect trip.
+                </p>
+                <button
+                  onClick={onOpenGetMoreMessagesModal}
+                  className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Get More Messages</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <div className="flex space-x-3">
           <div className="flex-1">
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me about flights, hotels, activities, or anything travel-related..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder={hasEnoughMessages() 
+                ? "Ask me about flights, hotels, activities, or anything travel-related..." 
+                : "You need more messages to continue chatting..."
+              }
+              disabled={!hasEnoughMessages()}
+              className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
+                !hasEnoughMessages() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+              }`}
               rows={1}
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
           </div>
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={!inputMessage.trim() || isLoading || !hasEnoughMessages()}
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
           >
             <Send className="w-4 h-4" />
@@ -277,6 +321,13 @@ export default function ChatWindow({
           </button>
         </div>
       </div>
+
+      {/* Get More Messages Modal */}
+      <GetMoreMessagesModal
+        isOpen={showGetMoreMessagesModal}
+        onClose={onCloseGetMoreMessagesModal || (() => {})}
+        currentMessageCount={messageCount}
+      />
     </motion.div>
   );
 } 

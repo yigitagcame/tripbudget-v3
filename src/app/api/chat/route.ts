@@ -26,6 +26,7 @@ import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
 // This service uses the Supabase service role key and MUST NEVER be imported in client-side code.
 import { tripServiceServer } from '@/lib/server/trip-service-server';
 import { MessageService } from '@/lib/message-service';
+import { MessageCounterServiceServer } from '@/lib/server/message-counter-service-server';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -343,6 +344,20 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('API - Trip verification successful');
+
+    // Check if user has enough messages
+    const hasEnoughMessages = await MessageCounterServiceServer.hasEnoughMessages(session.user.id);
+    
+    if (!hasEnoughMessages) {
+      return NextResponse.json(
+        { 
+          error: 'Insufficient messages',
+          message: 'You have run out of messages. Please earn more messages to continue chatting.',
+          messageCount: 0
+        },
+        { status: 402 }
+      );
+    }
 
     const currentTripId = tripId;
 
@@ -764,6 +779,14 @@ export async function POST(request: NextRequest) {
       follow_up: response.followUp,
       trip_context: response.tripContext
     });
+
+    // After successful AI response, decrease message count
+    try {
+      await MessageCounterServiceServer.decreaseMessageCount(session.user.id);
+    } catch (error) {
+      console.error('Error decreasing message count:', error);
+      // Don't fail the request if counter update fails
+    }
 
     // Create response with rate limit headers
     const nextResponse = NextResponse.json(response);

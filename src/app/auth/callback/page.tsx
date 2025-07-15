@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { Plane, Loader2 } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -21,6 +23,34 @@ export default function AuthCallbackPage() {
         }
 
         if (session) {
+          // Check for referral code and apply it if exists
+          const referralCode = localStorage.getItem('referralCode');
+          if (referralCode) {
+            try {
+              // Call backend to use referral code
+              const response = await fetch('/api/referrals/use', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ referralCode })
+              });
+              
+              if (response.ok) {
+                console.log('Referral bonus applied successfully!');
+                showSuccess('Referral bonus applied! You received extra messages.');
+              } else {
+                const errorData = await response.json();
+                console.error('Error applying referral:', errorData.error);
+                showError('Unable to apply referral bonus, but signup successful');
+              }
+            } catch (error) {
+              console.error('Error applying referral:', error);
+              // Don't block the flow, just log the error
+            } finally {
+              // Clear referral code regardless of success/failure
+              localStorage.removeItem('referralCode');
+            }
+          }
+
           // Successful authentication, redirect to chat
           router.push('/chat');
         } else {

@@ -19,6 +19,8 @@
     "test:auth": "tsx scripts/test-auth.ts",
     "test:creative-api": "tsx scripts/test-creative-api.ts",
     "test:creative-transformers": "tsx scripts/test-creative-transformers.ts",
+    "test:invitation": "tsx scripts/test-invitation-system.ts",
+    "validate:invitation": "tsx scripts/validate-invitation-implementation.ts",
     "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {

@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import TripDetailsSidebar from '@/components/chat/TripDetailsSidebar';
 import TripPlanStack from '@/components/chat/TripPlanStack';
 import ChatWindow from '@/components/chat/ChatWindow';
-import { sendChatMessage, type ChatMessage, type TripDetails, type Card } from '@/lib/chat-api';
+
+import { sendChatMessage, type ChatMessage, type TripDetails, type Card, type ChatError } from '@/lib/chat-api';
 import { tripService, type TripData } from '@/lib/trip-service';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +40,7 @@ export default function ChatPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [realtimeSubscription, setRealtimeSubscription] = useState<any>(null);
+  const [showGetMoreMessagesModal, setShowGetMoreMessagesModal] = useState(false);
 
   // Load trip data and chat history on component mount
   useEffect(() => {
@@ -228,13 +230,64 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Error sending message:', error);
       
-      // Add error message
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 1,
-        type: 'ai',
-        content: "I'm sorry, I encountered an error while processing your message. Please try again.",
-        timestamp: new Date()
-      };
+      // Handle specific error types
+      let errorMessage: ChatMessage;
+      
+      const referralBonus = parseInt(process.env.NEXT_PUBLIC_MESSAGE_COUNTER_REFERRAL_BONUS || '25');
+
+      if (error && typeof error === 'object' && 'type' in error) {
+        const chatError = error as ChatError;
+        
+        switch (chatError.type) {
+          case 'insufficient_messages':
+            errorMessage = {
+              id: Date.now() + 1,
+              type: 'ai',
+              content: `I'd love to help you plan your trip, but you've run out of messages! Please get more messages to continue our conversation. You can share your invitation link with friends to earn ${referralBonus} bonus messages for each successful signup.`,
+              timestamp: new Date()
+            };
+            break;
+          case 'rate_limit':
+            errorMessage = {
+              id: Date.now() + 1,
+              type: 'ai',
+              content: "I'm receiving too many requests right now. Please wait a moment and try again.",
+              timestamp: new Date()
+            };
+            break;
+          case 'validation':
+            errorMessage = {
+              id: Date.now() + 1,
+              type: 'ai',
+              content: "I couldn't understand your request. Please try rephrasing your message.",
+              timestamp: new Date()
+            };
+            break;
+          case 'network_error':
+            errorMessage = {
+              id: Date.now() + 1,
+              type: 'ai',
+              content: "I'm having trouble connecting to my services. Please check your internet connection and try again.",
+              timestamp: new Date()
+            };
+            break;
+          default:
+            errorMessage = {
+              id: Date.now() + 1,
+              type: 'ai',
+              content: "I'm sorry, I encountered an error while processing your message. Please try again.",
+              timestamp: new Date()
+            };
+        }
+      } else {
+        // Generic error message
+        errorMessage = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: "I'm sorry, I encountered an error while processing your message. Please try again.",
+          timestamp: new Date()
+        };
+      }
       
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -256,6 +309,10 @@ export default function ChatPage() {
       id: Date.now()
     };
     setTripPlan(prev => [...prev, newItem]);
+  };
+
+  const handleGetMoreMessages = () => {
+    setShowGetMoreMessagesModal(true);
   };
 
   if (loading || chatHistoryLoading) {
@@ -307,6 +364,7 @@ export default function ChatPage() {
               <TripDetailsSidebar 
                 tripDetails={tripDetails}
                 onTripDetailsChange={handleTripDetailsChange}
+                onGetMoreMessages={handleGetMoreMessages}
               />
             </motion.div>
 
@@ -325,6 +383,9 @@ export default function ChatPage() {
                 onAddToTripPlan={handleAddToTripPlan}
                 currency={currency}
                 onCurrencyChange={setCurrency}
+                showGetMoreMessagesModal={showGetMoreMessagesModal}
+                onOpenGetMoreMessagesModal={() => setShowGetMoreMessagesModal(true)}
+                onCloseGetMoreMessagesModal={() => setShowGetMoreMessagesModal(false)}
               />
             </motion.div>
 

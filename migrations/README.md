@@ -6,6 +6,9 @@ This folder contains SQL migration files for the trip storage system.
 
 1. `20241220_143000_create_trips_table.sql` - Creates the trips table with proper schema and security policies
 2. `20241220_143100_add_trips_indexes.sql` - Adds indexes for better query performance
+3. `20241221_000000_enable_realtime_trips.sql` - Enables realtime subscriptions for trips table
+4. `20241221_143000_create_messages_table.sql` - Creates the messages table for chat functionality
+5. `20241222_000000_create_message_counter_tables.sql` - Creates message counter and referral tables
 
 ## How to Run Migrations
 
@@ -16,6 +19,7 @@ This folder contains SQL migration files for the trip storage system.
 
 ## Table Structure
 
+### Trips Table
 The `trips` table includes:
 - `id` - UUID primary key
 - `trip_id` - Unique 8-character string for URL routing
@@ -25,6 +29,25 @@ The `trips` table includes:
 - `departure_date` - Trip start date
 - `return_date` - Trip end date
 - `passenger_count` - Number of travelers
+- `created_at` - Timestamp of creation
+
+### Message Counter Tables
+The message counter system includes two tables:
+
+#### user_message_counters
+- `id` - UUID primary key
+- `user_id` - References auth.users(id), unique constraint
+- `message_count` - Integer count of remaining messages
+- `created_at` - Timestamp of creation
+- `updated_at` - Timestamp of last update
+
+#### user_referrals
+- `id` - UUID primary key
+- `referrer_id` - References auth.users(id) of the referrer
+- `referee_email` - Email of the person being referred
+- `referral_code` - Unique referral code string
+- `is_used` - Boolean flag indicating if code was used
+- `used_at` - Timestamp when code was used
 - `created_at` - Timestamp of creation
 
 ## Security
