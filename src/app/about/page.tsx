@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Building2, MapPin, Mail, Globe, FileText, User } from 'lucide-react';
+import { Building2, MapPin, Globe, FileText, User } from 'lucide-react';
 import Footer from '@/components/landing/Footer';
 
 export default function AboutPage() {
@@ -20,7 +20,7 @@ export default function AboutPage() {
               About <span className="text-blue-600">Trip Budget</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're revolutionizing travel planning with AI-powered solutions that make trip budgeting 
+              We&apos;re revolutionizing travel planning with AI-powered solutions that make trip budgeting 
               smarter, faster, and more personalized than ever before.
             </p>
           </motion.div>
@@ -215,7 +215,7 @@ export default function AboutPage() {
                 Trust & Security
               </h3>
               <p className="text-gray-600">
-                We prioritize the security and privacy of our users' data, implementing robust 
+                We prioritize the security and privacy of our users&apos; data, implementing robust 
                 protection measures and transparent practices.
               </p>
             </motion.div>

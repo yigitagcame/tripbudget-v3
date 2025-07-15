@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plane, Loader2, Twitter, LucideIcon, AlertCircle } from 'lucide-react';
+import { Plane, Loader2, Twitter, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -11,14 +11,14 @@ const providers = [
   {
     name: 'Google',
     id: 'google',
-    icon: (props: any) => (
+    icon: (props: React.SVGProps<SVGSVGElement>) => (
       <svg {...props} viewBox="0 0 24 24" fill="none"><g><path d="M21.805 10.023h-9.765v3.977h5.617c-.242 1.242-1.484 3.648-5.617 3.648-3.375 0-6.125-2.789-6.125-6.148 0-3.359 2.75-6.148 6.125-6.148 1.922 0 3.211.82 3.953 1.523l2.703-2.625c-1.719-1.617-3.953-2.617-6.656-2.617-5.523 0-10 4.477-10 10s4.477 10 10 10c5.781 0 9.594-4.055 9.594-9.773 0-.656-.07-1.156-.156-1.477z" fill="#4285F4"/><path d="M3.545 7.548l3.289 2.414c.898-1.367 2.367-2.414 4.166-2.414 1.148 0 2.211.398 3.039 1.055l2.719-2.648c-1.484-1.367-3.398-2.203-5.758-2.203-3.516 0-6.484 2.367-7.547 5.555z" fill="#34A853"/><path d="M12 22c2.672 0 4.922-.883 6.563-2.406l-3.047-2.492c-.844.57-1.922.914-3.516.914-2.734 0-5.055-1.844-5.883-4.336l-3.242 2.5c1.547 3.125 4.844 5.32 8.125 5.32z" fill="#FBBC05"/><path d="M21.805 10.023h-9.765v3.977h5.617c-.242 1.242-1.484 3.648-5.617 3.648-3.375 0-6.125-2.789-6.125-6.148 0-3.359 2.75-6.148 6.125-6.148 1.922 0 3.211.82 3.953 1.523l2.703-2.625c-1.719-1.617-3.953-2.617-6.656-2.617-5.523 0-10 4.477-10 10s4.477 10 10 10c5.781 0 9.594-4.055 9.594-9.773 0-.656-.07-1.156-.156-1.477z" fill="#4285F4"/></g></svg>
     ),
   },
   {
     name: 'X.com',
     id: 'twitter',
-    icon: (props: any) => <Twitter {...props} />,
+    icon: (props: React.SVGProps<SVGSVGElement>) => <Twitter {...props} />,
   },
 ];
 

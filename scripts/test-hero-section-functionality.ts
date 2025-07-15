@@ -6,14 +6,14 @@
  */
 
 // Mock the URL and navigation functionality
-const mockRouter = {
+const mockRouterHero = {
   push: (url: string) => {
     console.log('Mock router.push called with:', url);
     return url;
   }
 };
 
-const mockSearchParams = {
+const mockSearchParamsHero = {
   get: (param: string) => {
     if (param === 'message') {
       return 'I want to plan a 5-day trip to Paris. I love art and food.';
@@ -37,7 +37,7 @@ try {
   const message = 'I want to plan a 5-day trip to Paris. I love art and food.';
   const encodedMessage = encodeURIComponent(message);
   const expectedUrl = `/chat?message=${encodedMessage}`;
-  const actualUrl = mockRouter.push(expectedUrl);
+  const actualUrl = mockRouterHero.push(expectedUrl);
   
   assert(actualUrl === expectedUrl, 'URL construction works correctly');
   assert(encodedMessage === 'I%20want%20to%20plan%20a%205-day%20trip%20to%20Paris.%20I%20love%20art%20and%20food.', 'Message encoding works correctly');
@@ -57,7 +57,7 @@ try {
 
 // Test 3: URL parameter extraction
 try {
-  const extractedMessage = mockSearchParams.get('message');
+  const extractedMessage = mockSearchParamsHero.get('message');
   assert(extractedMessage === 'I want to plan a 5-day trip to Paris. I love art and food.', 'URL parameter extraction works correctly');
 } catch (error) {
   console.error('Test 3 failed:', error);
