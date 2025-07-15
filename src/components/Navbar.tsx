@@ -9,17 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, signOut } = useAuth();
-
-  // Handle scroll effect for navbar background
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const { user, signOut, loading } = useAuth();
 
   const navItems = [
     { name: 'Features', href: '/#features' },
@@ -28,6 +18,70 @@ export default function Navbar() {
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ];
+
+  // Handle scroll effect for navbar background
+  useEffect(() => {
+    // Only run on client side to prevent hydration mismatch
+    if (typeof window === 'undefined') return;
+    
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Don't render until auth state is determined to prevent hydration mismatch
+  if (loading) {
+    return (
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-lg border-b border-gray-200"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center space-x-2"
+            >
+              <Link href="/" className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 rounded-lg p-1">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Plane className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Trip Budget
+                </span>
+              </Link>
+            </motion.div>
+            
+            {/* Loading placeholder */}
+            <div className="hidden md:flex items-center space-x-8">
+              {navItems.map((item) => (
+                <div key={item.name} className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+              ))}
+            </div>
+            
+            {/* Loading placeholder for auth buttons */}
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+            </div>
+            
+            {/* Mobile menu button */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              className="md:hidden p-2 rounded-lg bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+            >
+              <Menu className="w-6 h-6" />
+            </motion.button>
+          </div>
+        </div>
+      </motion.nav>
+    );
+  }
 
   const handleSignOut = async () => {
     await signOut();
