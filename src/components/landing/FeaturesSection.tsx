@@ -79,18 +79,9 @@ export default function FeaturesSection() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 text-lg leading-relaxed mb-6">
+                <p className="text-gray-600 text-lg leading-relaxed">
                   {feature.description}
                 </p>
-
-                {/* Learn More Link */}
-                <a 
-                  href="#learn-more" 
-                  className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 transition-colors group/link"
-                >
-                  Learn More
-                  <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
-                </a>
               </div>
             </motion.div>
           ))}
@@ -111,9 +102,12 @@ export default function FeaturesSection() {
             <p className="text-blue-100 text-lg mb-6 max-w-2xl mx-auto">
               Join thousands of travelers who have ditched the spreadsheets and multiple apps for one intelligent AI-powered platform.
             </p>
-            <button className="bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors">
+            <a 
+              href="/chat" 
+              className="inline-block bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
+            >
               Get Started for Free
-            </button>
+            </a>
           </div>
         </motion.div>
       </div>

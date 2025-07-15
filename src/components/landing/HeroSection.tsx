@@ -1,9 +1,31 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Sparkles, Play, ArrowRight, MessageCircle, CreditCard } from 'lucide-react';
+import { Sparkles, ArrowRight, MessageCircle, CreditCard } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function HeroSection() {
+  const [message, setMessage] = useState('');
+  const router = useRouter();
+
+  const handleStartPlanning = () => {
+    if (message.trim()) {
+      // Navigate to chat page with the message as a URL parameter
+      router.push(`/chat?message=${encodeURIComponent(message.trim())}`);
+    } else {
+      // If no message, just go to chat page
+      router.push('/chat');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleStartPlanning();
+    }
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background with parallax effect */}
@@ -102,10 +124,10 @@ export default function HeroSection() {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="flex justify-center items-center"
           >
-            <button className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2">
+            <Link href="/chat" className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2">
               Start Planning for Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </Link>
           </motion.div>
         </motion.div>
 
@@ -127,9 +149,15 @@ export default function HeroSection() {
                   type="text"
                   placeholder="I want to plan a 5-day trip to Paris. I love art and food."
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
                 />
               </div>
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+              <button
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                onClick={handleStartPlanning}
+              >
                 Start Planning
               </button>
             </div>
