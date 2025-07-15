@@ -22,6 +22,7 @@
     "test:invitation": "tsx scripts/test-invitation-system.ts",
     "validate:invitation": "tsx scripts/validate-invitation-implementation.ts",
     "test:newsletter": "tsx scripts/test-newsletter-integration.ts",
+    "test:contact": "tsx scripts/test-contact-integration.ts",
     "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {

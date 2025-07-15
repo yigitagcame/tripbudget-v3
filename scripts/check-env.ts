@@ -11,7 +11,9 @@ const requiredEnvVars = [
   'RAPIDAPI_KEY',
   'RAPIDAPI_HOST',
   'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'BREVO_API_KEY',
+  'SUPPORT_EMAIL_ADDRESS'
 ];
 
 // Optional environment variables
@@ -64,6 +66,8 @@ function checkEnvironmentVariables() {
     console.log('- Tequila API Key: https://tequila.kiwi.com/developers');
     console.log('- RapidAPI Key: https://rapidapi.com (subscribe to Booking.com API)');
     console.log('- Supabase URL & Keys: https://supabase.com (create a new project)');
+    console.log('- Brevo API Key: https://brevo.com (for newsletter and contact form)');
+    console.log('- Support Email Address: Your support email address for contact form');
     
     return false;
   } else {
