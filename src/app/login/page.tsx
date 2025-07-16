@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Plane, Loader2, Twitter, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
+import BetaBadge from '@/components/BetaBadge';
 
 const providers = [
   {
@@ -126,9 +127,12 @@ function LoginPageContent() {
             >
               <Plane className="w-8 h-8 text-white" />
             </motion.div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Sign in to Trip Budget
-            </h2>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <h2 className="text-3xl font-bold text-gray-900">
+                Sign in to Trip Budget
+              </h2>
+              <BetaBadge size="md" />
+            </div>
             <p className="text-gray-600">
               Use your Google or X.com (Twitter) account to continue
             </p>
