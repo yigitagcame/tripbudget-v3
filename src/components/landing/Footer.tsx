@@ -5,6 +5,7 @@ import { Mail, MessageCircle, Twitter, Linkedin, Instagram, Globe, Heart, Plane,
 import Link from 'next/link';
 import { useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
+import BetaBadge from '../BetaBadge';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -62,6 +63,7 @@ export default function Footer() {
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
                   Trip Budget
                 </span>
+                <BetaBadge size="sm" />
               </Link>
             </div>
             <p className="text-gray-300 text-lg mb-6 max-w-md">

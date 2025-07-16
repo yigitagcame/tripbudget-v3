@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sparkles, Plane, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import BetaBadge from './BetaBadge';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -113,6 +114,7 @@ export default function Navbar() {
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Trip Budget
               </span>
+              <BetaBadge size="sm" />
             </Link>
           </motion.div>
 
