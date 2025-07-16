@@ -1,10 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Mail, MessageCircle, Twitter, Linkedin, Instagram, Globe, Heart, Plane, Loader2 } from 'lucide-react';
+import { Mail, MessageCircle, Linkedin, Globe, Heart, Plane, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
+import BetaBadge from '../BetaBadge';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -62,6 +63,7 @@ export default function Footer() {
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-sm">
                   Trip Budget
                 </span>
+                <BetaBadge size="sm" />
               </Link>
             </div>
             <p className="text-gray-300 text-lg mb-6 max-w-md">
@@ -70,25 +72,13 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-4">
               <a
-                href="#twitter"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a
-                href="#linkedin"
+                href="https://www.linkedin.com/company/tripbudgetme/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
                 aria-label="LinkedIn"
               >
                 <Linkedin className="w-5 h-5" />
-              </a>
-              <a
-                href="#instagram"
-                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-5 h-5" />
               </a>
             </div>
           </div>
