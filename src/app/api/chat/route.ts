@@ -27,6 +27,7 @@ import { checkRateLimit, chatRateLimiter } from '@/lib/rate-limiter';
 import { tripServiceServer } from '@/lib/server/trip-service-server';
 import { MessageService } from '@/lib/message-service';
 import { MessageCounterServiceServer } from '@/lib/server/message-counter-service-server';
+import { posthog } from 'posthog-js';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -256,6 +257,13 @@ CRITICAL: You MUST preserve and build upon these existing trip details. Only upd
 
 export async function POST(request: NextRequest) {
   try {
+    // Track chat API call
+    posthog.capture('chat_api_called', {
+      timestamp: new Date().toISOString(),
+      user_agent: request.headers.get('user-agent'),
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+    });
+
     // Create Supabase client for server-side auth
     const supabase = createSupabaseServerClient(request);
 
@@ -779,6 +787,17 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if counter update fails
     }
 
+    // Track successful chat response
+    posthog.capture('chat_response_successful', {
+      trip_id: currentTripId,
+      user_id: session.user.id,
+      has_flight_cards: flightCards.length > 0,
+      has_accommodation_cards: accommodationCards.length > 0,
+      has_creative_cards: creativeCards.length > 0,
+      total_cards: flightCards.length + accommodationCards.length + creativeCards.length,
+      currency: currency
+    });
+
     // Create response with rate limit headers
     const nextResponse = NextResponse.json(response);
     
@@ -791,6 +810,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Chat API error:', error);
+    
+    // Track chat API error
+    posthog.capture('chat_api_error', {
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+      timestamp: new Date().toISOString()
+    });
     
     // Provide more specific error messages
     if (error instanceof Error) {
