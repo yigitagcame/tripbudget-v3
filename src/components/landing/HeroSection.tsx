@@ -5,12 +5,20 @@ import { Sparkles, ArrowRight, MessageCircle, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { trackEvent } from '@/lib/posthog';
 
 export default function HeroSection() {
   const [message, setMessage] = useState('');
   const router = useRouter();
 
   const handleStartPlanning = () => {
+    // Track the start planning event
+    trackEvent('start_planning_clicked', {
+      has_initial_message: !!message.trim(),
+      message_length: message.trim().length,
+      source: 'hero_section'
+    });
+
     if (message.trim()) {
       // Navigate to chat page with the message as a URL parameter
       router.push(`/chat?message=${encodeURIComponent(message.trim())}`);
@@ -124,7 +132,11 @@ export default function HeroSection() {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="flex justify-center items-center"
           >
-            <Link href="/chat" className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2">
+            <Link 
+              href="/chat" 
+              className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
+              onClick={() => trackEvent('cta_button_clicked', { source: 'hero_section', button_type: 'primary' })}
+            >
               Start Planning for Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>

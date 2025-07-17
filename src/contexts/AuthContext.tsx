@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { identifyUser, resetUser, trackEvent } from '@/lib/posthog';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('AuthContext - Auth state change:', event);
         console.log('AuthContext - Session:', !!session);
         console.log('AuthContext - User:', session?.user?.email);
+        
+        // Track auth events with PostHog
+        if (event === 'SIGNED_IN' && session?.user) {
+          trackEvent('user_signed_in', {
+            user_id: session.user.id,
+            email: session.user.email,
+            provider: session.user.app_metadata?.provider
+          });
+          identifyUser(session.user.id, {
+            email: session.user.email,
+            created_at: session.user.created_at
+          });
+        } else if (event === 'SIGNED_OUT') {
+          trackEvent('user_signed_out');
+          resetUser();
+        }
+        
         setUser(session?.user ?? null);
         setLoading(false);
       }
@@ -50,6 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
+    
+    if (error) {
+      trackEvent('sign_in_failed', {
+        error_message: error.message,
+        error_code: error.status
+      });
+    }
+    
     return { user: data.user, error };
   };
 
@@ -59,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithProvider = async (provider: 'google' | 'twitter') => {
+    trackEvent('oauth_initiated', { provider });
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -68,6 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (error) {
       console.error('OAuth error:', error);
+      trackEvent('oauth_failed', {
+        provider,
+        error_message: error.message,
+        error_code: error.status
+      });
     }
   };
 
