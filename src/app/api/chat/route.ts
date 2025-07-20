@@ -61,8 +61,10 @@ interface AIResponse {
     price?: string;
     location?: string;
   }>;
-  "follow-up message": string;
-  "trip-context": TripDetails;
+  followUpMessage: string;
+  tripContext: TripDetails;
+  intent?: string;
+  functionToCall?: string;
 }
 
 // Function to get current date in a readable format
@@ -91,7 +93,7 @@ function sanitizeJSONResponse(text: string): string {
 // System prompt for the AI travel assistant
 const SYSTEM_PROMPT = `You are an AI travel assistant that helps users plan their trips.
 
-CRITICAL: You MUST respond using ONLY a valid JSON object. Do NOT include any text outside the JSON. Do NOT include backticks or markdown.
+CRITICAL: Respond with only a valid JSON object — no markdown, preamble, or escaping unless necessary.
 
 RESPONSE FORMAT:
 {
@@ -105,20 +107,22 @@ RESPONSE FORMAT:
       "location": "Location"
     }
   ],
-  "follow-up message": "Your follow-up question or next step",
-  "trip-context": {
+  "followUpMessage": "Your follow-up question or next step",
+  "tripContext": {
     "from": "origin location or empty string",
     "to": "destination or empty string", 
     "departDate": "YYYY-MM-DD or empty string",
     "returnDate": "YYYY-MM-DD or empty string",
     "passengers": 0
-  }
+  },
+  "intent": "detected_intent_here",
+  "functionToCall": "function_name_if_needed"
 }
 
-CURRENCY: Always display prices in the user's preferred currency (EUR for Euro, USD for US Dollar). When making recommendations, consider the currency context and mention prices in the appropriate format.
+CURRENCY: Always display prices in EUR (Euro) by default. When making recommendations, consider the currency context and mention prices in Euro format (€).
 
 TRIP CONTEXT:
-- CRITICAL: If trip context is provided in the system prompt, you MUST preserve it and only update fields when the user explicitly provides new information
+- CRITICAL: Only update individual trip context fields if the user provides new information. Preserve all other fields as-is.
 - Extract destination from user messages → update "to" field (only if not already set or user provides new destination)
 - Extract origin from user messages → update "from" field (only if not already set or user provides new origin)
 - Extract dates from user messages → update "departDate" and "returnDate" (only if not already set or user provides new dates)
@@ -128,8 +132,13 @@ TRIP CONTEXT:
 
 SUGGESTIONS:
 - Include suggestions array when user asks about flights, hotels, restaurants, activities, places, or destinations
+- Suggestions must match the detected intent and align with user interest
 - Use "destination" type for destination suggestions (cities, countries, regions)
 - Leave suggestions empty array [] if no specific recommendations needed
+
+RESPONSE SAFETY:
+- If necessary data is missing (e.g., no destination for a flight search), return a helpful message and avoid function calls
+- Always provide actionable guidance when data is insufficient
 
 FLIGHT SEARCH:
 - Use search_flights function when users ask about flights
@@ -698,20 +707,22 @@ export async function POST(request: NextRequest) {
       aiResponse = {
         message: "I found some flight options for you! Here are the details:",
         suggestions: [],
-        "follow-up message": "Would you like me to search for more options or help you with anything else?",
-        "trip-context": {
+        followUpMessage: "Would you like me to search for more options or help you with anything else?",
+        tripContext: {
           from: "",
           to: "",
           departDate: "",
           returnDate: "",
           passengers: 0
-        }
+        },
+        intent: "general_assistance",
+        functionToCall: undefined
       };
     }
 
     // Update trip if AI provided new details that are different from existing data
-    if (currentTripId && aiResponse["trip-context"]) {
-      const newContext = aiResponse["trip-context"];
+    if (currentTripId && aiResponse.tripContext) {
+      const newContext = aiResponse.tripContext;
       const updates: any = {};
       let hasChanges = false;
 
@@ -754,7 +765,7 @@ export async function POST(request: NextRequest) {
              accommodationCards.length > 0 ? accommodationCards : 
              creativeCards.length > 0 ? creativeCards : 
              (aiResponse.suggestions || []),
-      followUp: aiResponse["follow-up message"],
+      followUp: aiResponse.followUpMessage,
       tripContext: {
         from: trip.origin || '',
         to: trip.destination || '',
