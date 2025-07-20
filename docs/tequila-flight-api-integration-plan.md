@@ -374,21 +374,23 @@ CRITICAL: You must respond in the following JSON format ONLY:
       "bookingUrl": "URL to booking page (optional)"
     }
   ],
-  "followUp": "The specific next step or follow-up question (this will be displayed separately in the Next Steps section)",
+  "followUpMessage": "The specific next step or follow-up question (this will be displayed separately in the Next Steps section)",
   "tripContext": {
     "from": "Updated origin location",
     "to": "Updated destination", 
     "departDate": "Updated departure date (YYYY-MM-DD)",
     "returnDate": "Updated return date (YYYY-MM-DD)",
     "passengers": 2
-  }
+  },
+  "intent": "detected_intent_here",
+  "functionToCall": "function_name_if_needed"
 }
 
 MANDATORY: You MUST ALWAYS include the tripContext field in your response, even if no trip details are known. If no trip details are available, use empty strings for text fields and 0 for passengers.
 
 The cards array is optional - only include it when you want to suggest specific places, flights, hotels, etc. The tripContext should always reflect the current trip details, updating them if new information is provided in the user's message.
 
-IMPORTANT FOR FOLLOW-UP: The "followUp" field should contain the specific next step or question, separate from your main message. The main message should be conversational, and the followUp should be the actionable part. 
+IMPORTANT FOR FOLLOW-UP: The "followUpMessage" field should contain the specific next step or question, separate from your main message. The main message should be conversational, and the followUpMessage should be the actionable part. 
 
 FORMATTING RULES:
 - If asking for multiple pieces of information, format as a bulleted list

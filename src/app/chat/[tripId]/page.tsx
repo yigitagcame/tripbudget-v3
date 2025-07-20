@@ -11,6 +11,7 @@ import { sendChatMessage, type ChatMessage, type TripDetails, type Card, type Ch
 import { tripService, type TripData } from '@/lib/trip-service';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMessageCounter } from '@/contexts/MessageCounterContext';
 import { MessageServiceClient } from '@/lib/message-service-client';
 
 interface TripPlanItem extends Card {
@@ -23,6 +24,7 @@ function ChatPageContent() {
   const searchParams = useSearchParams();
   const tripId = params.tripId as string;
   const { user } = useAuth();
+  const { decreaseLocalCount } = useMessageCounter();
   const initialMessage = searchParams.get('message');
   
   const [trip, setTrip] = useState<TripData | null>(null);
@@ -184,6 +186,9 @@ function ChatPageContent() {
       console.log('ChatPage - Updated messages after adding user message:', updatedMessages);
       return updatedMessages;
     });
+
+    // Decrease message count on frontend when user sends a message (local state only)
+    decreaseLocalCount(1);
 
     setIsLoading(true);
 

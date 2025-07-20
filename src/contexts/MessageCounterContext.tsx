@@ -9,6 +9,7 @@ interface MessageCounterContextType {
   loading: boolean;
   refreshCounter: () => Promise<void>;
   decreaseCount: (amount?: number) => Promise<void>;
+  decreaseLocalCount: (amount?: number) => void;
   hasEnoughMessages: (required?: number) => boolean;
 }
 
@@ -56,6 +57,11 @@ export function MessageCounterProvider({ children }: { children: React.ReactNode
     }
   };
 
+  const decreaseLocalCount = (amount: number = 1) => {
+    // Only update the local state, no backend call
+    setMessageCount(prev => Math.max(prev - amount, 0));
+  };
+
   const hasEnoughMessages = (required: number = 1) => {
     return messageCount >= required;
   };
@@ -65,6 +71,7 @@ export function MessageCounterProvider({ children }: { children: React.ReactNode
     loading,
     refreshCounter,
     decreaseCount,
+    decreaseLocalCount,
     hasEnoughMessages
   };
 

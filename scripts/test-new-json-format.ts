@@ -10,14 +10,16 @@ const testJsonResponse = {
       "location": "Riga Old Town"
     }
   ],
-  "follow-up message": "To help you plan better, could you tell me when you're planning to travel and how many people are coming?",
-  "trip-context": {
+  "followUpMessage": "To help you plan better, could you tell me when you're planning to travel and how many people are coming?",
+  "tripContext": {
     "from": "",
     "to": "Riga",
     "departDate": "",
     "returnDate": "",
     "passengers": 0
-  }
+  },
+  "intent": "destination_inquiry",
+  "functionToCall": undefined
 };
 
 console.log('Testing new JSON response format...\n');
@@ -25,25 +27,24 @@ console.log('Testing new JSON response format...\n');
 // Test parsing
 try {
   const parsed = JSON.parse(JSON.stringify(testJsonResponse));
+  
   console.log('✅ JSON parsing successful');
   console.log('Message:', parsed.message);
   console.log('Suggestions count:', parsed.suggestions?.length || 0);
-  console.log('Follow-up message:', parsed["follow-up message"]);
-  console.log('Trip context:', parsed["trip-context"]);
+  console.log('Follow-up message:', parsed.followUpMessage);
+  console.log('Trip context:', parsed.tripContext);
+  console.log('Intent:', parsed.intent);
+  console.log('Function to call:', parsed.functionToCall);
   
-  // Test required fields
-  const hasRequiredFields = parsed.message && 
-                           parsed["follow-up message"] && 
-                           parsed["trip-context"];
+  // Validate required fields
+  const isValid = 
+    parsed.message &&
+    Array.isArray(parsed.suggestions) &&
+    parsed.followUpMessage &&
+    parsed.tripContext;
   
-  if (hasRequiredFields) {
-    console.log('✅ All required fields present');
-  } else {
-    console.log('❌ Missing required fields');
-  }
+  console.log('\n✅ Validation result:', isValid ? 'PASSED' : 'FAILED');
   
 } catch (error) {
   console.error('❌ JSON parsing failed:', error);
-}
-
-console.log('\n✅ New JSON format test completed!'); 
+} 

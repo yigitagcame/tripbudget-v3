@@ -44,6 +44,8 @@ export interface ChatResponse {
   followUp: string;
   tripContext: TripDetails;
   tripId?: string; // Add tripId to response
+  intent?: string; // Detected user intent
+  functionToCall?: string; // Function to be called (optional)
 }
 
 export interface ChatError {
