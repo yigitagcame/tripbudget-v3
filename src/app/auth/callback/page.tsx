@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { Plane, Loader2 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
+import { isNewUser, extractUserDataForBrevo, getReferralSource } from '@/lib/user-utils';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -48,6 +49,32 @@ export default function AuthCallbackPage() {
             } finally {
               // Clear referral code regardless of success/failure
               localStorage.removeItem('referralCode');
+            }
+          }
+
+          // Add new user to Brevo list if this is a new user
+          if (isNewUser(session.user)) {
+            try {
+              console.log('Adding new user to Brevo list:', session.user.email);
+              
+              const referralSource = getReferralSource();
+              const userData = extractUserDataForBrevo(session.user, referralSource);
+              
+              const response = await fetch('/api/brevo/add-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+              });
+              
+              if (response.ok) {
+                console.log('User successfully added to Brevo list');
+              } else {
+                console.error('Failed to add user to Brevo list:', response.status);
+                // Don't block the flow, just log the error
+              }
+            } catch (error) {
+              console.error('Error adding user to Brevo list:', error);
+              // Don't block the flow, just log the error
             }
           }
 

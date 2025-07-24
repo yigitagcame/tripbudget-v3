@@ -27,6 +27,8 @@
     "test:newsletter": "tsx scripts/test-newsletter-integration.ts",
     "test:contact": "tsx scripts/test-contact-integration.ts",
     "test:posthog": "tsx scripts/test-posthog-integration.ts",
+    "test:brevo-user": "tsx scripts/test-brevouser-integration.ts",
+    "sync:users": "tsx scripts/sync-existing-users.ts",
     "check:env": "tsx scripts/check-env.ts"
   },
   "dependencies": {

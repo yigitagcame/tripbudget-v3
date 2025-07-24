@@ -17,6 +17,8 @@ The AI chat API now returns responses in a structured JSON format that includes 
   cards: Card[];          // Optional recommendation cards
   followUp: string;       // Follow-up question/suggestion
   tripContext: TripDetails; // Updated trip information
+  intent?: string;        // Detected user intent
+  functionToCall?: string; // Function to be called (optional)
 }
 ```
 
@@ -73,6 +75,16 @@ interface TripDetails {
 }
 ```
 
+#### 5. Intent (optional)
+- **Type**: `string`
+- **Description**: The detected user intent for analytics and multi-model coordination
+- **Examples**: "flight_search", "hotel_search", "destination_inquiry", "package_deal"
+
+#### 6. Function to Call (optional)
+- **Type**: `string`
+- **Description**: Specific function to be called by the backend for logic handling
+- **Examples**: "search_flights", "search_accommodation", "find_cheapest_destination"
+
 ## Example API Response
 
 ### Flight Recommendations
@@ -87,7 +99,7 @@ interface TripDetails {
       "type": "flight",
       "title": "Japan Airlines JL006",
       "description": "Direct flight from JFK to Narita, 14h 15m duration",
-      "price": "$1,200 - $1,800",
+      "price": "€1,200 - €1,800",
       "rating": 4.5,
       "location": "JFK → NRT",
       "bookingUrl": "https://example.com/book/jl006"
@@ -96,7 +108,7 @@ interface TripDetails {
       "type": "flight",
       "title": "United Airlines UA79",
       "description": "Direct flight from Newark to Narita, 13h 45m duration",
-      "price": "$1,100 - $1,600",
+      "price": "€1,100 - €1,600",
       "rating": 4.2,
       "location": "EWR → NRT",
       "bookingUrl": "https://example.com/book/ua79"
@@ -109,7 +121,9 @@ interface TripDetails {
     "departDate": "2024-03-15",
     "returnDate": "2024-03-22",
     "passengers": 2
-  }
+  },
+  "intent": "flight_search",
+  "functionToCall": "search_flights"
 }
 ```
 
@@ -150,7 +164,9 @@ interface TripDetails {
     "departDate": "",
     "returnDate": "",
     "passengers": 0
-  }
+  },
+  "intent": "destination_inquiry",
+  "functionToCall": null
 }
 ```
 
@@ -182,6 +198,8 @@ The frontend displays:
 4. **State Synchronization**: Trip context keeps frontend and AI in sync
 5. **Interactive Elements**: Users can add recommendations to their trip plan
 6. **Consistent Format**: All responses follow the same structure
+7. **Intent Detection**: Better analytics and multi-model coordination
+8. **Function Hooks**: Backend can use functionToCall for specific logic
 
 ## Error Handling
 
@@ -190,6 +208,8 @@ If the AI fails to return proper JSON, the system falls back to:
 {
   "message": "Original AI response text",
   "followUp": "How can I help you with your trip planning?",
-  "tripContext": "Current trip details or empty defaults"
+  "tripContext": "Current trip details or empty defaults",
+  "intent": "general_assistance",
+  "functionToCall": null
 }
 ``` 
