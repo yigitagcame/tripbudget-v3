@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Plane, Loader2 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { isNewUser, extractUserDataForBrevo, getReferralSource } from '@/lib/user-utils';
+import { trackReferralBonusEarned } from '@/lib/posthog';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -38,6 +39,12 @@ export default function AuthCallbackPage() {
               if (response.ok) {
                 console.log('Referral bonus applied successfully!');
                 showSuccess('Referral bonus applied! You received extra messages.');
+                
+                // Track referral bonus earned
+                trackReferralBonusEarned(referralCode, 25, {
+                  user_id: session.user.id,
+                  user_email: session.user.email
+                });
               } else {
                 const errorData = await response.json();
                 console.error('Error applying referral:', errorData.error);

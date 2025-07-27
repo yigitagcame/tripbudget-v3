@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { generateTripId } from './trip-utils';
+import { trackTripCreated } from './posthog';
 
 export interface TripData {
   trip_id: string;
@@ -62,6 +63,12 @@ export const tripService = {
     }
     
     console.log('TripService - Successfully created trip:', tripId);
+    
+    // Track trip creation
+    trackTripCreated(tripId, {
+      user_id: userId
+    });
+    
     return tripId;
   },
 

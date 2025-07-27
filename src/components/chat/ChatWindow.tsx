@@ -7,6 +7,7 @@ import RecommendationCards from './RecommendationCards';
 import GetMoreMessagesModal from './GetMoreMessagesModal';
 import { Card } from '@/lib/chat-api';
 import { useMessageCounter } from '@/contexts/MessageCounterContext';
+import { trackCurrencyChanged } from '@/lib/posthog';
 
 interface Message {
   id: number;
@@ -99,7 +100,11 @@ export default function ChatWindow({
   };
 
   const handleCurrencyChange = (newCurrency: string) => {
-    if (onCurrencyChange) {
+    if (onCurrencyChange && newCurrency !== currency) {
+      // Track currency change
+      trackCurrencyChanged(currency, newCurrency, {
+        trip_id: tripDetails?.from || 'unknown'
+      });
       onCurrencyChange(newCurrency);
     }
     setShowCurrencyDropdown(false);

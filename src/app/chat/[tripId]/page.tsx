@@ -13,7 +13,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessageCounter } from '@/contexts/MessageCounterContext';
 import { MessageServiceClient } from '@/lib/message-service-client';
-import { trackChatMessage, trackSaveCard } from '@/lib/posthog';
+import { trackChatMessage, trackSaveCard, trackTripAccessed } from '@/lib/posthog';
 
 interface TripPlanItem extends Card {
   id: number;
@@ -54,6 +54,12 @@ function ChatPageContent() {
   useEffect(() => {
     if (tripId && user) {
       loadTripAndHistory();
+      // Track trip access
+      trackTripAccessed(tripId, {
+        user_id: user.id,
+        trip_origin: trip?.origin,
+        trip_destination: trip?.destination
+      });
     }
   }, [tripId, user]);
 

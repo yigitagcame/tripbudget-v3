@@ -66,4 +66,91 @@ export const trackBookingLinkClick = (cardType: string, cardTitle: string, booki
     timestamp: new Date().toISOString(),
     ...properties
   })
+}
+
+// Trip management tracking
+export const trackTripCreated = (tripId: string, properties?: Record<string, any>) => {
+  posthog.capture('trip_created', {
+    trip_id: tripId,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+export const trackTripDetailsUpdated = (tripId: string, updatedFields: string[], properties?: Record<string, any>) => {
+  posthog.capture('trip_details_updated', {
+    trip_id: tripId,
+    updated_fields: updatedFields,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+export const trackTripAccessed = (tripId: string, properties?: Record<string, any>) => {
+  posthog.capture('trip_accessed', {
+    trip_id: tripId,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+// Message counter tracking
+export const trackReferralBonusEarned = (referralCode: string, bonusAmount: number, properties?: Record<string, any>) => {
+  posthog.capture('referral_bonus_earned', {
+    referral_code: referralCode,
+    bonus_amount: bonusAmount,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+export const trackMessageLimitReached = (properties?: Record<string, any>) => {
+  posthog.capture('message_limit_reached', {
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+export const trackGetMoreMessagesModalOpened = (properties?: Record<string, any>) => {
+  posthog.capture('get_more_messages_modal_opened', {
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+// Currency and preferences tracking
+export const trackCurrencyChanged = (fromCurrency: string, toCurrency: string, properties?: Record<string, any>) => {
+  posthog.capture('currency_changed', {
+    from_currency: fromCurrency,
+    to_currency: toCurrency,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+// Error tracking
+export const trackError = (errorType: string, errorMessage: string, properties?: Record<string, any>) => {
+  posthog.capture('error_occurred', {
+    error_type: errorType,
+    error_message: errorMessage,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+export const trackRateLimitHit = (endpoint: string, properties?: Record<string, any>) => {
+  posthog.capture('rate_limit_hit', {
+    endpoint: endpoint,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+export const trackApiError = (apiName: string, errorMessage: string, properties?: Record<string, any>) => {
+  posthog.capture('api_error', {
+    api_name: apiName,
+    error_message: errorMessage,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
 } 
