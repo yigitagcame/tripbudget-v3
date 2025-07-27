@@ -37,4 +37,33 @@ export const setUserProperties = (properties: Record<string, any>) => {
 // Reset user (for logout)
 export const resetUser = () => {
   posthog.reset()
+}
+
+// Chat message tracking
+export const trackChatMessage = (properties?: Record<string, any>) => {
+  posthog.capture('chat_message_sent', {
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+// Save card action tracking
+export const trackSaveCard = (cardType: string, cardTitle: string, properties?: Record<string, any>) => {
+  posthog.capture('card_saved', {
+    card_type: cardType,
+    card_title: cardTitle,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
+}
+
+// Booking link click tracking
+export const trackBookingLinkClick = (cardType: string, cardTitle: string, bookingUrl: string, properties?: Record<string, any>) => {
+  posthog.capture('booking_link_clicked', {
+    card_type: cardType,
+    card_title: cardTitle,
+    booking_url: bookingUrl,
+    timestamp: new Date().toISOString(),
+    ...properties
+  })
 } 

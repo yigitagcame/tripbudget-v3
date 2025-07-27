@@ -13,6 +13,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessageCounter } from '@/contexts/MessageCounterContext';
 import { MessageServiceClient } from '@/lib/message-service-client';
+import { trackChatMessage, trackSaveCard } from '@/lib/posthog';
 
 interface TripPlanItem extends Card {
   id: number;
@@ -169,6 +170,14 @@ function ChatPageContent() {
       return;
     }
 
+    // Track chat message sent
+    trackChatMessage({
+      trip_id: tripId,
+      message_length: message.trim().length,
+      currency: currency || 'EUR',
+      user_id: user?.id
+    });
+
     const userMessage: ChatMessage = {
       id: Date.now(),
       type: 'user',
@@ -305,6 +314,15 @@ function ChatPageContent() {
   };
 
   const handleAddToTripPlan = (card: Card) => {
+    // Track save card action
+    trackSaveCard(card.type, card.title, {
+      trip_id: tripId,
+      user_id: user?.id,
+      card_location: card.location,
+      card_price: card.price,
+      card_rating: card.rating
+    });
+
     const newItem = {
       ...card,
       id: Date.now()
