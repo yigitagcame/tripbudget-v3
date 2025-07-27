@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, Share2, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageCounterService } from '@/lib/message-counter-service';
+import { trackGetMoreMessagesModalOpened } from '@/lib/posthog';
 
 interface GetMoreMessagesModalProps {
   isOpen: boolean;
@@ -28,6 +29,11 @@ export default function GetMoreMessagesModal({
   // Generate invitation link when modal opens
   React.useEffect(() => {
     if (isOpen && user) {
+      // Track modal opening
+      trackGetMoreMessagesModalOpened({
+        user_id: user.id,
+        current_message_count: currentMessageCount
+      });
       generateInvitationLink();
     }
   }, [isOpen, user]);
