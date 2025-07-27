@@ -28,6 +28,7 @@ import { tripServiceServer } from '@/lib/server/trip-service-server';
 import { MessageService } from '@/lib/message-service';
 import { MessageCounterServiceServer } from '@/lib/server/message-counter-service-server';
 import { posthog } from 'posthog-js';
+import { trackMessageLimitReached, trackApiError } from '@/lib/posthog';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -357,6 +358,12 @@ export async function POST(request: NextRequest) {
     const hasEnoughMessages = await MessageCounterServiceServer.hasEnoughMessages(session.user.id);
     
     if (!hasEnoughMessages) {
+      // Track message limit reached
+      trackMessageLimitReached({
+        user_id: session.user.id,
+        trip_id: tripId
+      });
+      
       return NextResponse.json(
         { 
           error: 'Insufficient messages',
@@ -823,9 +830,7 @@ export async function POST(request: NextRequest) {
     console.error('Chat API error:', error);
     
     // Track chat API error
-    posthog.capture('chat_api_error', {
-      error_message: error instanceof Error ? error.message : 'Unknown error',
-      error_type: error instanceof Error ? error.constructor.name : 'Unknown',
+    trackApiError('chat_api', error instanceof Error ? error.message : 'Unknown error', {
       timestamp: new Date().toISOString()
     });
     

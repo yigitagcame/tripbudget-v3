@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Plane, Hotel, Utensils, MapPin, Star, ExternalLink, Plus, Globe, Package, Calendar } from 'lucide-react';
 import { Card } from '@/lib/chat-api';
+import { trackBookingLinkClick, trackSaveCard } from '@/lib/posthog';
 
 interface RecommendationCardsProps {
   cards: Card[];
@@ -142,7 +143,15 @@ export default function RecommendationCards({ cards, onAddToTripPlan }: Recommen
               <div className="flex items-center space-x-2">
                 {onAddToTripPlan && card.type !== 'destination' && (
                   <button
-                    onClick={() => onAddToTripPlan(card)}
+                    onClick={() => {
+                      // Track save card action
+                      trackSaveCard(card.type, card.title, {
+                        card_location: card.location,
+                        card_price: card.price,
+                        card_rating: card.rating
+                      });
+                      onAddToTripPlan(card);
+                    }}
                     className="inline-flex items-center space-x-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors"
                   >
                     <Plus className="w-3 h-3" />
@@ -154,6 +163,11 @@ export default function RecommendationCards({ cards, onAddToTripPlan }: Recommen
                     href={card.bookingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackBookingLinkClick(card.type, card.title, card.bookingUrl!, {
+                      card_location: card.location,
+                      card_price: card.price,
+                      card_rating: card.rating
+                    })}
                     className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
                   >
                     <span>Book Now</span>
