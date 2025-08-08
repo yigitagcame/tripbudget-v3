@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Star, Quote } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 const testimonials = [
   {
@@ -79,21 +80,25 @@ export default function TestimonialsSection() {
         {/* Testimonials Carousel */}
         <div className="relative max-w-4xl mx-auto">
           {/* Navigation Buttons */}
-          <button
+          <Button
             onClick={prevTestimonial}
+            variant="ghost"
+            size="sm"
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow border border-gray-200"
             aria-label="Previous testimonial"
           >
             <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={nextTestimonial}
+            variant="ghost"
+            size="sm"
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow border border-gray-200"
             aria-label="Next testimonial"
           >
             <ChevronRight className="w-6 h-12 text-gray-600" />
-          </button>
+          </Button>
 
           {/* Testimonial Cards */}
           <div className="overflow-hidden">
@@ -147,14 +152,18 @@ export default function TestimonialsSection() {
           {/* Dots Indicator */}
           <div className="flex justify-center mt-8 gap-2">
             {testimonials.map((_, index) => (
-              <button
+              <Button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
+                variant="ghost"
+                size="sm"
                 className={`w-3 h-3 rounded-full transition-colors ${
                   index === currentIndex ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
                 aria-label={`Go to testimonial ${index + 1}`}
-              />
+              >
+                <span className="sr-only">Testimonial {index + 1}</span>
+              </Button>
             ))}
           </div>
         </div>

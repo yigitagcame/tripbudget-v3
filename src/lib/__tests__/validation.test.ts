@@ -4,7 +4,7 @@ import {
   validateLocationCode,
   formatDateForAPI,
   parseDate 
-} from '../validation';
+} from '../utils/validation';
 
 // Simple test function that can be run manually
 export async function testValidation() {

@@ -5,7 +5,8 @@ import { Mail, MessageCircle, Linkedin, Globe, Heart, Plane, Loader2 } from 'luc
 import Link from 'next/link';
 import { useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
-import BetaBadge from '../BetaBadge';
+import BetaBadge from '../ui/BetaBadge';
+import { Button, Input } from '@/components/ui';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -150,7 +151,7 @@ export default function Footer() {
               Learn how to plan better trips with AI, avoid common planning mistakes, and get exclusive offers.
             </p>
             <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input
+              <Input
                 type="email"
                 placeholder="Enter your email"
                 value={email}
@@ -158,20 +159,15 @@ export default function Footer() {
                 disabled={isSubmitting}
                 className="flex-1 px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <button 
+              <Button 
                 type="submit"
                 disabled={isSubmitting}
+                loading={isSubmitting}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[120px]"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Subscribing...
-                  </>
-                ) : (
-                  'Subscribe'
-                )}
-              </button>
+                {!isSubmitting && 'Subscribe'}
+                {isSubmitting && 'Subscribing...'}
+              </Button>
             </form>
           </div>
         </motion.div>

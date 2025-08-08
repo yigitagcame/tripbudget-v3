@@ -2,7 +2,6 @@
 // For server-side/admin use only. Exposing the service role key to the client is a critical security risk.
 
 import { createClient } from '@supabase/supabase-js';
-import { generateTripId } from '../trip-utils';
 
 export interface TripData {
   trip_id: string;
@@ -26,7 +25,38 @@ function createServerClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+// Generate a unique trip ID
+function generateTripId(): string {
+  return `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 export const tripServiceServer = {
+  // Create a new trip
+  async createTrip(tripData: { user_id: string; name?: string; description?: string }) {
+    const tripId = generateTripId();
+    console.log('TripServiceServer - Creating new trip with ID:', tripId, 'for user:', tripData.user_id);
+    
+    const supabaseServer = createServerClient();
+    const { data, error } = await supabaseServer
+      .from('trips')
+      .insert({ 
+        trip_id: tripId,
+        user_id: tripData.user_id,
+        name: tripData.name,
+        description: tripData.description
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('TripServiceServer - Error creating trip:', error);
+      return null;
+    }
+    
+    console.log('TripServiceServer - Successfully created trip:', tripId);
+    return data;
+  },
+
   // Get trip by ID (bypasses RLS)
   async getTrip(tripId: string) {
     console.log('TripServiceServer - Getting trip by ID:', tripId);
@@ -36,6 +66,27 @@ export const tripServiceServer = {
       .from('trips')
       .select('*')
       .eq('trip_id', tripId)
+      .single();
+    
+    if (error) {
+      console.error('TripServiceServer - Error getting trip:', error);
+      return null;
+    }
+    
+    console.log('TripServiceServer - Found trip:', data ? 'Yes' : 'No');
+    return data;
+  },
+
+  // Get trip by ID (alias for getTrip)
+  async getTripById(tripId: string, userId: string) {
+    console.log('TripServiceServer - Getting trip by ID:', tripId, 'for user:', userId);
+    
+    const supabaseServer = createServerClient();
+    const { data, error } = await supabaseServer
+      .from('trips')
+      .select('*')
+      .eq('trip_id', tripId)
+      .eq('user_id', userId)
       .single();
     
     if (error) {
@@ -68,5 +119,30 @@ export const tripServiceServer = {
       .order('created_at', { ascending: false });
     
     return data || [];
+  },
+
+  // Get trips by user ID (alias for getUserTrips)
+  async getTripsByUserId(userId: string) {
+    return this.getUserTrips(userId);
+  },
+
+  // Delete trip
+  async deleteTrip(tripId: string, userId: string): Promise<boolean> {
+    console.log('TripServiceServer - Deleting trip:', tripId, 'for user:', userId);
+    
+    const supabaseServer = createServerClient();
+    const { error } = await supabaseServer
+      .from('trips')
+      .delete()
+      .eq('trip_id', tripId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('TripServiceServer - Error deleting trip:', error);
+      return false;
+    }
+    
+    console.log('TripServiceServer - Successfully deleted trip:', tripId);
+    return true;
   }
 }; 

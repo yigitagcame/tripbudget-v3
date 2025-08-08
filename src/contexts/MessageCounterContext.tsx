@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { MessageCounterService } from '@/lib/message-counter-service';
+import { MessageCounterService } from '@/lib/api/chat/message-counter-service';
 
-interface MessageCounterContextType {
+export interface MessageCounterContextType {
   messageCount: number;
   loading: boolean;
   refreshCounter: () => Promise<void>;
@@ -14,6 +14,8 @@ interface MessageCounterContextType {
 }
 
 const MessageCounterContext = createContext<MessageCounterContextType | undefined>(undefined);
+
+export { MessageCounterContext };
 
 export function MessageCounterProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

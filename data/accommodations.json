@@ -1,0 +1,101 @@
+{
+  "search_results": [
+    {
+      "id": "hotel-1",
+      "name": "Le Grand Hotel Paris",
+      "description": "Luxury 5-star hotel in the heart of Paris",
+      "address": "123 Champs-Élysées, Paris, France",
+      "rating": 4.8,
+      "price_per_night": 350,
+      "currency": "EUR",
+      "amenities": ["WiFi", "Pool", "Spa", "Restaurant", "Gym"],
+      "images": ["https://example.com/hotel1-1.jpg", "https://example.com/hotel1-2.jpg"],
+      "booking_url": "https://booking.com/hotel1",
+      "location": {
+        "latitude": 48.8566,
+        "longitude": 2.3522
+      }
+    },
+    {
+      "id": "hotel-2",
+      "name": "Hotel Eiffel View",
+      "description": "Boutique hotel with stunning Eiffel Tower views",
+      "address": "456 Rue de la Paix, Paris, France",
+      "rating": 4.5,
+      "price_per_night": 280,
+      "currency": "EUR",
+      "amenities": ["WiFi", "Restaurant", "Bar", "Room Service"],
+      "images": ["https://example.com/hotel2-1.jpg", "https://example.com/hotel2-2.jpg"],
+      "booking_url": "https://booking.com/hotel2",
+      "location": {
+        "latitude": 48.8584,
+        "longitude": 2.2945
+      }
+    },
+    {
+      "id": "hotel-3",
+      "name": "Budget Inn Paris",
+      "description": "Affordable accommodation in central Paris",
+      "address": "789 Rue Saint-Michel, Paris, France",
+      "rating": 3.8,
+      "price_per_night": 120,
+      "currency": "EUR",
+      "amenities": ["WiFi", "Breakfast"],
+      "images": ["https://example.com/hotel3-1.jpg"],
+      "booking_url": "https://booking.com/hotel3",
+      "location": {
+        "latitude": 48.8462,
+        "longitude": 2.3438
+      }
+    }
+  ],
+  "popular_destinations": [
+    {
+      "name": "Paris",
+      "country": "France",
+      "popularity_score": 95,
+      "avg_price": 250
+    },
+    {
+      "name": "Tokyo",
+      "country": "Japan",
+      "popularity_score": 88,
+      "avg_price": 180
+    },
+    {
+      "name": "New York",
+      "country": "United States",
+      "popularity_score": 92,
+      "avg_price": 300
+    }
+  ],
+  "amenities": [
+    "WiFi",
+    "Pool",
+    "Spa",
+    "Restaurant",
+    "Gym",
+    "Bar",
+    "Room Service",
+    "Breakfast",
+    "Parking",
+    "Air Conditioning"
+  ],
+  "destinations": [
+    {
+      "name": "Paris",
+      "country": "France",
+      "type": "city"
+    },
+    {
+      "name": "London",
+      "country": "United Kingdom",
+      "type": "city"
+    },
+    {
+      "name": "Tokyo",
+      "country": "Japan",
+      "type": "city"
+    }
+  ]
+}

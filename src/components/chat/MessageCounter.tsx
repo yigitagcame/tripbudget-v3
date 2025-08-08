@@ -3,6 +3,7 @@
 import React from 'react';
 import { useMessageCounter } from '@/contexts/MessageCounterContext';
 import { MessageCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface MessageCounterProps {
   onGetMoreMessages?: () => void;
@@ -28,12 +29,14 @@ export default function MessageCounter({ onGetMoreMessages }: MessageCounterProp
           {messageCount} messages left
         </span>
         {onGetMoreMessages && (
-          <button
+          <Button
             onClick={onGetMoreMessages}
+            variant="danger"
+            size="sm"
             className="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
           >
             Get More
-          </button>
+          </Button>
         )}
       </div>
     );

@@ -1,30 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { getBrevoUserService, BrevoUserData, BrevoUserService } from '@/lib/brevo-user-service';
+import { simulateDelay } from '@/lib/utils/mock-data';
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate environment configuration
-    if (!BrevoUserService.validateEnvironment()) {
-      return NextResponse.json(
-        { error: 'Brevo configuration is incomplete' },
-        { status: 500 }
-      );
-    }
-
-    // Create Supabase client for server-side auth
-    const supabase = createSupabaseServerClient(request);
-
-    // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    await simulateDelay();
     
-    if (authError || !session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const { 
       email, 
@@ -52,33 +32,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare user data for Brevo
-    const userData: BrevoUserData = {
+    // Mock successful user addition to Brevo
+    console.log('Mock Brevo user addition:', {
       email,
       firstName,
       lastName,
-      userId: session.user.id,
-      signupDate: new Date().toISOString(),
       provider,
       referralSource,
       initialTripContext
-    };
+    });
 
-    // Add user to Brevo list
-    const brevoUserService = getBrevoUserService();
-    const success = await brevoUserService.addUserToMainList(userData);
-
-    if (success) {
-      return NextResponse.json({
-        success: true,
-        message: 'User successfully added to Brevo list'
-      });
-    } else {
-      return NextResponse.json(
-        { error: 'Failed to add user to Brevo list' },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      success: true,
+      message: 'User successfully added to Brevo list'
+    });
 
   } catch (error: any) {
     console.error('Error adding user to Brevo list:', error);

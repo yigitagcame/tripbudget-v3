@@ -1,0 +1,43 @@
+{
+  "trips": [
+    {
+      "id": "1",
+      "user_id": "user-1",
+      "name": "Paris Adventure",
+      "description": "A romantic getaway to the City of Light",
+      "origin": "New York",
+      "destination": "Paris",
+      "departure_date": "2024-06-15",
+      "return_date": "2024-06-22",
+      "passenger_count": 2,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": "2",
+      "user_id": "user-1",
+      "name": "Tokyo Business Trip",
+      "description": "Business conference in Tokyo",
+      "origin": "San Francisco",
+      "destination": "Tokyo",
+      "departure_date": "2024-07-10",
+      "return_date": "2024-07-15",
+      "passenger_count": 1,
+      "created_at": "2024-01-20T14:30:00Z",
+      "updated_at": "2024-01-20T14:30:00Z"
+    },
+    {
+      "id": "3",
+      "user_id": "user-2",
+      "name": "Family Beach Vacation",
+      "description": "Relaxing family vacation in Hawaii",
+      "origin": "Los Angeles",
+      "destination": "Honolulu",
+      "departure_date": "2024-08-05",
+      "return_date": "2024-08-12",
+      "passenger_count": 4,
+      "created_at": "2024-02-01T09:15:00Z",
+      "updated_at": "2024-02-01T09:15:00Z"
+    }
+  ]
+}

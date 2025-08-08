@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { sendChatMessage } from '@/lib/chat-api';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { sendChatMessage } from '@/lib/api/chat/chat-api';
+import ProtectedRoute from '@/components/shared/ProtectedRoute';
+import { Button } from '@/components/ui';
 
 function NewTripContent() {
   const router = useRouter();
@@ -53,12 +54,13 @@ function NewTripContent() {
               <div className="text-red-600 text-4xl mb-4">⚠️</div>
               <h2 className="text-xl font-semibold text-red-800 mb-2">Error Creating Trip</h2>
               <p className="text-red-700 mb-4">{error}</p>
-              <button
+              <Button
                 onClick={() => router.push('/chat')}
+                variant="danger"
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Go Back to Chat
-              </button>
+              </Button>
             </div>
           </div>
         </div>

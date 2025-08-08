@@ -1,4 +1,4 @@
-import { searchFlights } from '../tequila-api';
+import { searchFlights } from '../api/flight/tequila-api';
 
 // Simple test function that can be run manually
 export async function testTequilaAPI() {

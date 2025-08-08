@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Lightbulb, ChevronDown, MessageCircle, AlertCircle } from 'lucide-react';
 import RecommendationCards from './RecommendationCards';
 import GetMoreMessagesModal from './GetMoreMessagesModal';
-import { Card } from '@/lib/chat-api';
+import { Card } from '@/lib/api/chat/chat-api';
 import { useMessageCounter } from '@/contexts/MessageCounterContext';
-import { trackCurrencyChanged } from '@/lib/posthog';
+import { trackCurrencyChanged } from '@/lib/utils/posthog';
+import { Button } from '@/components/ui';
 
 interface Message {
   id: number;
@@ -140,14 +141,14 @@ export default function ChatWindow({
           
           {/* Currency Selector */}
           <div className="relative" ref={currencyDropdownRef}>
-            <button
+            <Button
               onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
               className="flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
             >
               <span className="text-sm font-medium text-gray-700">{currentCurrency.symbol}</span>
               <span className="text-sm text-gray-600">{currentCurrency.code}</span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
-            </button>
+            </Button>
             
             <AnimatePresence>
               {showCurrencyDropdown && (
@@ -158,7 +159,7 @@ export default function ChatWindow({
                   className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]"
                 >
                   {currencyOptions.map((option) => (
-                    <button
+                    <Button
                       key={option.code}
                       onClick={() => handleCurrencyChange(option.code)}
                       className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
@@ -169,7 +170,7 @@ export default function ChatWindow({
                         <span className="font-medium">{option.symbol}</span>
                         <span>{option.code}</span>
                       </div>
-                    </button>
+                    </Button>
                   ))}
                 </motion.div>
               )}
@@ -286,13 +287,13 @@ export default function ChatWindow({
                 <p className="text-sm text-red-700 mb-3">
                   You have {messageCount} messages left. Share your invitation link with friends to get more messages and continue planning your perfect trip.
                 </p>
-                <button
+                <Button
                   onClick={onOpenGetMoreMessagesModal}
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Get More Messages</span>
-                </button>
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -316,14 +317,14 @@ export default function ChatWindow({
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
           </div>
-          <button
+          <Button
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || isLoading || !hasEnoughMessages()}
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
           >
             <Send className="w-4 h-4" />
             <span>Send</span>
-          </button>
+          </Button>
         </div>
       </div>
 

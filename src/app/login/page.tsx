@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Plane, Loader2, Twitter, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import BetaBadge from '@/components/BetaBadge';
+import BetaBadge from '@/components/ui/BetaBadge';
 
 const providers = [
   {

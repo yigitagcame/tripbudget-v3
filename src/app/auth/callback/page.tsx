@@ -2,12 +2,12 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/config/supabase';
 import { motion } from 'framer-motion';
 import { Plane, Loader2 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
-import { isNewUser, extractUserDataForBrevo, getReferralSource } from '@/lib/user-utils';
-import { trackReferralBonusEarned } from '@/lib/posthog';
+import { isNewUser, extractUserDataForBrevo, getReferralSource } from '@/lib/utils/user-utils';
+import { trackReferralBonusEarned } from '@/lib/utils/posthog';
 
 export default function AuthCallbackPage() {
   const router = useRouter();

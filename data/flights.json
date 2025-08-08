@@ -1,0 +1,89 @@
+{
+  "search_results": [
+    {
+      "id": "flight-1",
+      "airline": "Delta Airlines",
+      "flight_number": "DL123",
+      "origin": "JFK",
+      "destination": "CDG",
+      "departure_time": "2024-06-15T10:30:00Z",
+      "arrival_time": "2024-06-16T08:45:00Z",
+      "duration": "8h 15m",
+      "price": 850,
+      "currency": "USD",
+      "cabin_class": "Economy",
+      "stops": 0,
+      "aircraft": "Boeing 777"
+    },
+    {
+      "id": "flight-2",
+      "airline": "Air France",
+      "flight_number": "AF456",
+      "origin": "JFK",
+      "destination": "CDG",
+      "departure_time": "2024-06-15T14:15:00Z",
+      "arrival_time": "2024-06-16T12:30:00Z",
+      "duration": "8h 15m",
+      "price": 920,
+      "currency": "USD",
+      "cabin_class": "Economy",
+      "stops": 0,
+      "aircraft": "Airbus A350"
+    },
+    {
+      "id": "flight-3",
+      "airline": "United Airlines",
+      "flight_number": "UA789",
+      "origin": "JFK",
+      "destination": "CDG",
+      "departure_time": "2024-06-15T18:45:00Z",
+      "arrival_time": "2024-06-16T17:00:00Z",
+      "duration": "8h 15m",
+      "price": 780,
+      "currency": "USD",
+      "cabin_class": "Economy",
+      "stops": 1,
+      "aircraft": "Boeing 787"
+    }
+  ],
+  "popular_routes": [
+    {
+      "origin": "New York",
+      "destination": "London",
+      "avg_price": 650,
+      "popularity_score": 95
+    },
+    {
+      "origin": "Los Angeles",
+      "destination": "Tokyo",
+      "avg_price": 1200,
+      "popularity_score": 88
+    },
+    {
+      "origin": "Chicago",
+      "destination": "Paris",
+      "avg_price": 850,
+      "popularity_score": 82
+    }
+  ],
+  "airports": [
+    {
+      "code": "JFK",
+      "name": "John F. Kennedy International Airport",
+      "city": "New York",
+      "country": "United States"
+    },
+    {
+      "code": "CDG",
+      "name": "Charles de Gaulle Airport",
+      "city": "Paris",
+      "country": "France"
+    },
+    {
+      "code": "LHR",
+      "name": "Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom"
+    }
+  ]
+}

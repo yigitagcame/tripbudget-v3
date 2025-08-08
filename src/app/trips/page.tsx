@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { tripService, type TripData } from '@/lib/trip-service';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { tripService, type TripData } from '@/lib/api/user/trip-service';
+import ProtectedRoute from '@/components/shared/ProtectedRoute';
+import { Button } from '@/components/ui';
 
 export default function TripsPage() {
   const router = useRouter();
@@ -109,7 +110,7 @@ export default function TripsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <button
+            <Button
               onClick={handleCreateNewTrip}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
@@ -117,7 +118,7 @@ export default function TripsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Start New Trip
-            </button>
+            </Button>
           </motion.div>
 
           {/* Trips Grid */}
@@ -134,12 +135,12 @@ export default function TripsPage() {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No trips yet</h3>
               <p className="text-gray-600 mb-4">Start planning your first trip to see it here</p>
-              <button
+              <Button
                 onClick={handleCreateNewTrip}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Start Your First Trip
-              </button>
+              </Button>
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -202,15 +203,15 @@ export default function TripsPage() {
                     </div>
                     
                     <div className="mt-4 pt-4 border-t border-gray-100">
-                      <button
-                        onClick={(e) => {
+                      <Button
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           router.push(`/chat/${trip.trip_id}`);
                         }}
                         className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         Continue Planning
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </motion.div>

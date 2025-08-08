@@ -5,7 +5,8 @@ import { Sparkles, ArrowRight, MessageCircle, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { trackEvent } from '@/lib/posthog';
+import { trackEvent } from '@/lib/utils/posthog';
+import { Button, Input } from '@/components/ui';
 
 export default function HeroSection() {
   const [message, setMessage] = useState('');
@@ -157,7 +158,7 @@ export default function HeroSection() {
             </h3>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <input
+                <Input
                   type="text"
                   placeholder="I want to plan a 5-day trip to Paris. I love art and food."
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
@@ -166,12 +167,12 @@ export default function HeroSection() {
                   onKeyPress={handleKeyPress}
                 />
               </div>
-              <button
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              <Button
                 onClick={handleStartPlanning}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
                 Start Planning
-              </button>
+              </Button>
             </div>
           </div>
         </motion.div>

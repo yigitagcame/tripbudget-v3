@@ -3,8 +3,8 @@
 import React, { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { tripService } from '@/lib/trip-service';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { tripService } from '@/lib/api/user/trip-service';
+import ProtectedRoute from '@/components/shared/ProtectedRoute';
 
 function ChatPageContent() {
   const router = useRouter();

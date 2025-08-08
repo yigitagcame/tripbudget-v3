@@ -5,6 +5,7 @@ import { MessageCircle, Mail, MapPin, Send, Loader2 } from 'lucide-react';
 import Footer from '@/components/landing/Footer';
 import { useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
+import { Button, Input } from '@/components/ui';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -128,7 +129,7 @@ export default function ContactPage() {
                     <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
                       First Name
                     </label>
-                    <input
+                    <Input
                       type="text"
                       id="firstName"
                       name="firstName"
@@ -143,7 +144,7 @@ export default function ContactPage() {
                     <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
                       Last Name
                     </label>
-                    <input
+                    <Input
                       type="text"
                       id="lastName"
                       name="lastName"
@@ -160,7 +161,7 @@ export default function ContactPage() {
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                     Email Address
                   </label>
-                  <input
+                  <Input
                     type="email"
                     id="email"
                     name="email"
@@ -176,7 +177,7 @@ export default function ContactPage() {
                   <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
                     Subject
                   </label>
-                  <input
+                  <Input
                     type="text"
                     id="subject"
                     name="subject"
@@ -204,25 +205,15 @@ export default function ContactPage() {
                   ></textarea>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <Button
                   type="submit"
                   disabled={isSubmitting}
+                  loading={isSubmitting}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Send Message
-                    </>
-                  )}
-                </motion.button>
+                  {!isSubmitting && <Send className="w-5 h-5" />}
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
+                </Button>
               </form>
             </motion.div>
 

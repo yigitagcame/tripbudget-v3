@@ -1,8 +1,9 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Hotel, Utensils, MapPin, X, Star, Clock, DollarSign, Plus, Globe } from 'lucide-react';
-import { Card } from '@/lib/chat-api';
+import { Plus, X, DollarSign, Star, MapPin, Plane, Hotel, Utensils, Mountain } from 'lucide-react';
+import { Card } from '@/lib/api/chat/chat-api';
+import { Button } from '@/components/ui';
 
 interface TripPlanItem extends Card {
   id: number;
@@ -26,7 +27,7 @@ export default function TripPlanStack({ tripPlan, onRemoveItem }: TripPlanStackP
       case 'activity':
         return <MapPin className="w-4 h-4" />;
       case 'destination':
-        return <Globe className="w-4 h-4" />;
+        return <Mountain className="w-4 h-4" />;
       default:
         return <MapPin className="w-4 h-4" />;
     }
@@ -116,12 +117,14 @@ export default function TripPlanStack({ tripPlan, onRemoveItem }: TripPlanStackP
                   className={`p-4 rounded-xl border ${getColorForType(item.type)} relative group`}
                 >
                   {/* Remove button */}
-                  <button
+                  <Button
                     onClick={() => onRemoveItem(item.id)}
+                    variant="ghost"
+                    size="sm"
                     className="absolute top-2 right-2 p-1 rounded-lg bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-600 hover:text-red-600 transition-all duration-200 opacity-0 group-hover:opacity-100"
                   >
                     <X className="w-3 h-3" />
-                  </button>
+                  </Button>
 
                   {/* Item content */}
                   <div className="flex items-start space-x-3">

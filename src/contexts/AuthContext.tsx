@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { identifyUser, resetUser, trackEvent } from '@/lib/posthog';
+import { supabase } from '@/lib/config/supabase';
+import { identifyUser, resetUser, trackEvent } from '@/lib/utils/posthog';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ user: User | null; error: AuthError | null }>;
@@ -14,6 +14,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export { AuthContext };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

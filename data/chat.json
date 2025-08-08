@@ -1,0 +1,101 @@
+{
+  "responses": [
+    {
+      "id": "chat-1",
+      "message": "I found some great flight options for your trip to Paris! Here are the best deals I could find:",
+      "suggestions": [
+        {
+          "type": "flight",
+          "title": "Delta Airlines - Direct Flight",
+          "description": "Non-stop flight from JFK to CDG",
+          "price": "$850",
+          "location": "New York → Paris"
+        },
+        {
+          "type": "flight",
+          "title": "Air France - Premium Economy",
+          "description": "Comfortable flight with meal service",
+          "price": "$920",
+          "location": "New York → Paris"
+        }
+      ],
+      "followUpMessage": "Would you like me to search for hotels in Paris as well?",
+      "tripContext": {
+        "from": "New York",
+        "to": "Paris",
+        "departDate": "2024-06-15",
+        "returnDate": "2024-06-22",
+        "passengers": 2
+      },
+      "intent": "flight_search",
+      "functionToCall": "search_flights"
+    },
+    {
+      "id": "chat-2",
+      "message": "I found some excellent hotel options in Paris for your stay:",
+      "suggestions": [
+        {
+          "type": "hotel",
+          "title": "Le Grand Hotel Paris",
+          "description": "Luxury 5-star hotel in the heart of Paris",
+          "price": "€350/night",
+          "location": "Champs-Élysées, Paris"
+        },
+        {
+          "type": "hotel",
+          "title": "Hotel Eiffel View",
+          "description": "Boutique hotel with stunning Eiffel Tower views",
+          "price": "€280/night",
+          "location": "Rue de la Paix, Paris"
+        }
+      ],
+      "followUpMessage": "Would you like me to help you plan activities in Paris?",
+      "tripContext": {
+        "from": "New York",
+        "to": "Paris",
+        "departDate": "2024-06-15",
+        "returnDate": "2024-06-22",
+        "passengers": 2
+      },
+      "intent": "accommodation_search",
+      "functionToCall": "search_accommodation"
+    },
+    {
+      "id": "chat-3",
+      "message": "I can help you plan your trip! To get started, I need to know where you'd like to go and when you're planning to travel.",
+      "suggestions": [
+        {
+          "type": "destination",
+          "title": "Paris, France",
+          "description": "The City of Light with iconic landmarks",
+          "price": "From $800",
+          "location": "France"
+        },
+        {
+          "type": "destination",
+          "title": "Tokyo, Japan",
+          "description": "Modern city with rich culture and history",
+          "price": "From $1200",
+          "location": "Japan"
+        },
+        {
+          "type": "destination",
+          "title": "London, UK",
+          "description": "Historic city with royal attractions",
+          "price": "From $650",
+          "location": "United Kingdom"
+        }
+      ],
+      "followUpMessage": "What's your budget and how many people are traveling?",
+      "tripContext": {
+        "from": "",
+        "to": "",
+        "departDate": "",
+        "returnDate": "",
+        "passengers": 0
+      },
+      "intent": "general_assistance",
+      "functionToCall": null
+    }
+  ]
+}

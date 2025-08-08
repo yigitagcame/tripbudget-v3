@@ -1,9 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plane, Hotel, Utensils, MapPin, Star, ExternalLink, Plus, Globe, Package, Calendar } from 'lucide-react';
-import { Card } from '@/lib/chat-api';
-import { trackBookingLinkClick, trackSaveCard } from '@/lib/posthog';
+import { Star, MapPin, Plus, ExternalLink, Plane, Hotel, Utensils, Mountain, Car, Train, Bus } from 'lucide-react';
+import { Card } from '@/lib/api/chat/chat-api';
+import { trackSaveCard, trackBookingLinkClick } from '@/lib/utils/posthog';
+import { Button } from '@/components/ui';
 
 interface RecommendationCardsProps {
   cards: Card[];
@@ -24,11 +25,11 @@ const getCardIcon = (type: Card['type']) => {
     case 'transport':
       return <Plane className="w-5 h-5" />;
     case 'destination':
-      return <Globe className="w-5 h-5" />;
+      return <MapPin className="w-5 h-5" />; // Changed from Globe to MapPin for destination
     case 'package':
-      return <Package className="w-5 h-5" />;
+      return <MapPin className="w-5 h-5" />; // Changed from Package to MapPin
     case 'seasonal':
-      return <Calendar className="w-5 h-5" />;
+      return <MapPin className="w-5 h-5" />; // Changed from Calendar to MapPin
     default:
       return <MapPin className="w-5 h-5" />;
   }
@@ -142,7 +143,7 @@ export default function RecommendationCards({ cards, onAddToTripPlan }: Recommen
               
               <div className="flex items-center space-x-2">
                 {onAddToTripPlan && card.type !== 'destination' && (
-                  <button
+                  <Button
                     onClick={() => {
                       // Track save card action
                       trackSaveCard(card.type, card.title, {
@@ -152,11 +153,13 @@ export default function RecommendationCards({ cards, onAddToTripPlan }: Recommen
                       });
                       onAddToTripPlan(card);
                     }}
+                    variant="ghost"
+                    size="sm"
                     className="inline-flex items-center space-x-1 text-green-600 hover:text-green-700 text-sm font-medium transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Add to Trip</span>
-                  </button>
+                  </Button>
                 )}
                 {card.bookingUrl && (
                   <a

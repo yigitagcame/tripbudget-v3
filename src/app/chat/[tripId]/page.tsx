@@ -6,14 +6,15 @@ import { motion } from 'framer-motion';
 import TripDetailsSidebar from '@/components/chat/TripDetailsSidebar';
 import TripPlanStack from '@/components/chat/TripPlanStack';
 import ChatWindow from '@/components/chat/ChatWindow';
+import { Button } from '@/components/ui';
 
-import { sendChatMessage, type ChatMessage, type TripDetails, type Card, type ChatError } from '@/lib/chat-api';
-import { tripService, type TripData } from '@/lib/trip-service';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { sendChatMessage, type ChatMessage, type TripDetails, type Card, type ChatError } from '@/lib/api/chat/chat-api';
+import { tripService, type TripData } from '@/lib/api/user/trip-service';
+import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMessageCounter } from '@/contexts/MessageCounterContext';
-import { MessageServiceClient } from '@/lib/message-service-client';
-import { trackChatMessage, trackSaveCard, trackTripAccessed } from '@/lib/posthog';
+import { MessageServiceClient } from '@/lib/api/chat/message-service-client';
+import { trackChatMessage, trackSaveCard, trackTripAccessed } from '@/lib/utils/posthog';
 
 interface TripPlanItem extends Card {
   id: number;
@@ -356,12 +357,12 @@ function ChatPageContent() {
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-16 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600 mb-4">Trip not found</p>
-          <button 
+          <Button 
             onClick={() => router.push('/trips')}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             View My Trips
-          </button>
+          </Button>
         </div>
       </div>
     );

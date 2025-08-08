@@ -1,40 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { getBrevoUserService } from '@/lib/brevo-user-service';
+import { simulateDelay } from '@/lib/utils/mock-data';
 
 export async function POST(request: NextRequest) {
   try {
-    // Create Supabase client for server-side auth
-    const supabase = createSupabaseServerClient(request);
-
-    // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    await simulateDelay();
     
-    if (authError || !session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // TODO: Add admin role check here
-    // For now, we'll allow any authenticated user to trigger sync
-    // In production, you should check if the user has admin privileges
-
     const body = await request.json();
     const { batchSize, delayMs, resumeFrom } = body;
 
     // Validate parameters
     const config = {
-      batchSize: batchSize || parseInt(process.env.BREVO_SYNC_BATCH_SIZE || '50'),
-      delayMs: delayMs || parseInt(process.env.BREVO_SYNC_DELAY_MS || '1000'),
+      batchSize: batchSize || 50,
+      delayMs: delayMs || 1000,
       maxRetries: 3,
       resumeFrom: resumeFrom || 0
     };
 
-    // Start sync process (this would typically be done in a background job)
-    // For now, we'll return a success response
-    console.log('Sync request received:', config);
+    // Mock sync process initiation
+    console.log('Mock sync request received:', config);
 
     return NextResponse.json({
       success: true,
@@ -54,22 +37,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Create Supabase client for server-side auth
-    const supabase = createSupabaseServerClient(request);
-
-    // Check authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    await simulateDelay();
     
-    if (authError || !session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get sync progress
-    const brevoUserService = getBrevoUserService();
-    const progress = await brevoUserService.getSyncProgress();
+    // Mock sync progress
+    const progress = {
+      totalUsers: 150,
+      syncedUsers: 120,
+      failedUsers: 5,
+      remainingUsers: 25,
+      syncStatus: 'in_progress',
+      lastSyncTime: new Date().toISOString(),
+      estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes from now
+    };
 
     return NextResponse.json({
       success: true,
